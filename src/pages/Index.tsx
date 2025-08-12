@@ -32,7 +32,7 @@ const Index = () => {
                   Tancy
                 </h1>
                 <p className="text-xl text-radio-text-muted tracking-wide">
-                  Techno in Georgia (live broadcast)
+                  Techno in Georgia (live)
                 </p>
               </div>
             </div>
