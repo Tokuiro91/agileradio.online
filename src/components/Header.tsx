@@ -20,7 +20,7 @@ const Header = ({ isPlaying = false }: HeaderProps) => {
               style={{ cursor: "pointer" }}
               className="text-2xl font-bold text-radio-text tracking-wider"
             >
-              <img src="/public/logo.jpg" width={50} height={50} alt="" />
+              <img src="/logo.jpg" width={50} height={50} alt="" />
             </div>
             <div className="flex items-center space-x-2">
               <div
