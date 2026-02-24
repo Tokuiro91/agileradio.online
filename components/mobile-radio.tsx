@@ -123,9 +123,12 @@ export function MobileRadio() {
     <div className="flex flex-col h-screen bg-[#0a0a0a] overflow-hidden select-none">
       {/* Mobile Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-[#2a2a2a] z-20">
-        <h1 className="text-lg font-bold tracking-wider text-[#e5e5e5]">
-          FL<span className="text-[#dc2626]">U</span>X
-        </h1>
+        <h1
+  style={{ fontFamily: 'Zero Prime Expanded' }}
+  className="text-xl font-bold tracking-wider text-[#e5e5e5]"
+>
+  A<span className="text-red-600">G</span>ILE
+</h1>
         <div className="flex items-center gap-2">
           <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f1f1f] text-[#a3a3a3]">
             <Info className="w-3.5 h-3.5" />
