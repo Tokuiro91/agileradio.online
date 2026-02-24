@@ -145,7 +145,7 @@ export function MobileRadio() {
 
       {/* HEADER */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a2a]">
-        <h1 className="text-xl font-bold tracking-wider text-[#e5e5e5]">
+        <h1 style={{ fontFamily: 'Zero Prime Expanded' }} className="text-xl font-bold tracking-wider text-[#e5e5e5]">
           A<span className="text-red-600">G</span>ILE
         </h1>
         <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f1f1f]">
