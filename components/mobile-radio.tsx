@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import {
   Play,
   Pause,
@@ -13,11 +14,13 @@ import {
   ChevronRight,
   Info,
 } from "lucide-react"
-import { generateArtists, DAY_LABELS } from "@/lib/artists-data"
+import { zeroPrime } from "@/app/fonts"
+import { DAY_LABELS } from "@/lib/artists-data"
 import type { Artist } from "@/lib/artists-data"
+import { useArtists } from "@/lib/use-artists"
 
 export function MobileRadio() {
-  const artists = useMemo(() => generateArtists(), [])
+  const { artists, ready } = useArtists()
   const [isPlaying, setIsPlaying] = useState(true)
   const [volume, setVolume] = useState(75)
   const [showVolume, setShowVolume] = useState(false)
@@ -32,7 +35,7 @@ export function MobileRadio() {
   const [touchDelta, setTouchDelta] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const listenerCount = 192
-  const TOTAL = artists.length
+  const TOTAL = artists.length || 1
 
   // Clock
   useEffect(() => {
@@ -49,12 +52,12 @@ export function MobileRadio() {
 
   // Progress
   useEffect(() => {
-    if (!isPlaying) return
+    if (!isPlaying || !ready) return
     const interval = setInterval(() => {
       setProgress((p) => (p >= 1 ? 0 : p + 0.0005))
     }, 100)
     return () => clearInterval(interval)
-  }, [isPlaying])
+  }, [isPlaying, ready])
 
   const getStatus = useCallback(
     (i: number): "played" | "playing" | "upcoming" => {
@@ -101,38 +104,46 @@ export function MobileRadio() {
     }
   }
 
+  if (!ready || !artists.length) {
+    return null
+  }
+
   const artist = artists[viewIndex]
   const status = getStatus(viewIndex)
   const prevArtist = artists[((viewIndex - 1) % TOTAL + TOTAL) % TOTAL]
   const nextArtist = artists[(viewIndex + 1) % TOTAL]
 
-  const timeDisplay = useMemo(() => {
-    if (status === "playing") {
-      const parts = artist.duration.split(":").map(Number)
+  const getTimeDisplay = (a: Artist, s: "played" | "playing" | "upcoming") => {
+    if (s === "playing") {
+      const parts = a.duration.split(":").map(Number)
       const totalSec = parts[0] * 3600 + parts[1] * 60 + parts[2]
       const elapsed = Math.floor(totalSec * progress)
       const h = String(Math.floor(elapsed / 3600)).padStart(2, "0")
       const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")
-      const s = String(elapsed % 60).padStart(2, "0")
-      return `${h}:${m}:${s}`
+      const sSec = String(elapsed % 60).padStart(2, "0")
+      return `${h}:${m}:${sSec}`
     }
-    return artist.duration
-  }, [artist.duration, status, progress])
+    return a.duration
+  }
+
+  const timeDisplay = getTimeDisplay(artist, status)
 
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] overflow-hidden select-none">
       {/* Mobile Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-[#2a2a2a] z-20">
         <h1
-  style={{ fontFamily: 'Zero Prime Expanded' }}
-  className="text-xl font-bold tracking-wider text-[#e5e5e5]"
->
-  A<span className="text-red-600">G</span>ILE
-</h1>
+          className={`${zeroPrime.className} text-xl font-bold tracking-wider text-[#e5e5e5]`}
+        >
+          A<span className="text-red-600">G</span>ILE
+        </h1>
         <div className="flex items-center gap-2">
-          <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f1f1f] text-[#a3a3a3]">
+          <Link
+            href="/admin"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f1f1f] text-[#a3a3a3] text-[10px] uppercase tracking-[0.15em]"
+          >
             <Info className="w-3.5 h-3.5" />
-          </button>
+          </Link>
         </div>
       </header>
 

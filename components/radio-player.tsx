@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { generateArtists } from "@/lib/artists-data"
 import { Header } from "@/components/header"
 import { ArtistCard } from "@/components/artist-card"
 import { Timeline } from "@/components/timeline"
+import { useArtists } from "@/lib/use-artists"
 
 
 export function RadioPlayer() {
-  const artists = useMemo(() => generateArtists(), [])
+  const { artists, ready } = useArtists()
   const [isPlaying, setIsPlaying] = useState(true)
   const [volume, setVolume] = useState(75)
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState(5)
@@ -16,12 +16,12 @@ export function RadioPlayer() {
   const [visibleIndex, setVisibleIndex] = useState(5)
   const scrollRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-  const listenerCount = 192
   const CARD_WIDTH = 316
-  const TOTAL_CARDS = artists.length
+  const TOTAL_CARDS = artists.length || 1
 
   // Progress simulation
   useEffect(() => {
+    if (!ready) return
     if (!isPlaying) return
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -33,10 +33,11 @@ export function RadioPlayer() {
       })
     }, 100)
     return () => clearInterval(interval)
-  }, [isPlaying, TOTAL_CARDS])
+  }, [isPlaying, TOTAL_CARDS, ready])
 
   // Infinite scroll: when we reach the end, jump back, and vice-versa
   useEffect(() => {
+    if (!ready) return
     const el = scrollRef.current
     if (!el) return
     const handleScroll = () => {
@@ -54,17 +55,18 @@ export function RadioPlayer() {
     }
     el.addEventListener("scroll", handleScroll, { passive: true })
     return () => el.removeEventListener("scroll", handleScroll)
-  }, [TOTAL_CARDS])
+  }, [TOTAL_CARDS, ready])
 
   // Initial scroll to playing artist
   useEffect(() => {
+    if (!ready) return
     const el = scrollRef.current
     if (!el) return
     // Set initial position to the "second copy" so infinite scroll works in both directions
     const targetScroll = CARD_WIDTH * (TOTAL_CARDS + currentPlayingIndex) - el.clientWidth / 2 + CARD_WIDTH / 2
     el.scrollLeft = targetScroll
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [TOTAL_CARDS, currentPlayingIndex, ready])
 
   const scrollToArtist = useCallback(
     (index: number) => {
@@ -88,17 +90,18 @@ export function RadioPlayer() {
 
   // Generate 3x copies for infinite scroll
   const tripleArtists = useMemo(() => {
+    if (!artists.length) return []
     return [...artists, ...artists, ...artists]
   }, [artists])
+
+  if (!ready || !artists.length) {
+    return null
+  }
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#0a0a0a]">
       <Header
-        isPlaying={isPlaying}
-        onTogglePlay={() => setIsPlaying(!isPlaying)}
         volume={volume}
-        onVolumeChange={setVolume}
-        listenerCount={listenerCount}
       />
 
       {/* Background ambience */}
@@ -157,6 +160,11 @@ export function RadioPlayer() {
         visibleIndex={visibleIndex}
         onSeek={scrollToArtist}
       />
+
+      {/* Debug: показать количество артистов для проверки синхронизации с админкой */}
+      <div className="absolute bottom-10 left-4 text-[10px] font-mono text-[#4b5563] pointer-events-none">
+        ARTISTS: {artists.length}
+      </div>
 
       {/* Hide scrollbar */}
       <style jsx global>{`
