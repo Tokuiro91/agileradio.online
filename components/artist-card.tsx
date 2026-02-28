@@ -57,9 +57,9 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0 }: A
       ? Math.min(Math.max(externalProgress, 0), 1)
       : localProgress
 
-  const formatUTC = (date: Date) => {
+  const formatLocal = (date: Date) => {
     if (!date || isNaN(date.getTime())) return "--:--"
-    return date.toISOString().slice(11, 16)
+    return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })
   }
 
   const formatElapsed = (ms: number) => {
@@ -89,11 +89,9 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0 }: A
             src={artist.image}
             alt={artist.name}
             fill
-            className={`object-cover transition-all duration-700 ${
-              effectiveStatus === "played" ? "grayscale brightness-50" : ""
-            } ${effectiveStatus === "upcoming" ? "brightness-90" : ""} ${
-              expanded ? "brightness-50" : ""
-            }`}
+            className={`object-cover transition-all duration-700 ${effectiveStatus === "played" ? "grayscale brightness-50" : ""
+              } ${effectiveStatus === "upcoming" ? "brightness-90" : ""} ${expanded ? "brightness-50" : ""
+              }`}
             sizes="330px"
           />
 
@@ -136,18 +134,17 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0 }: A
 
         {/* TIMER BADGE */}
         <div
-          className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono backdrop-blur-sm ${
-            effectiveStatus === "playing"
-              ? "bg-[#dc2626]/90 text-white"
-              : effectiveStatus === "played"
+          className={`absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-xs font-mono backdrop-blur-sm ${effectiveStatus === "playing"
+            ? "bg-[#dc2626]/90 text-white"
+            : effectiveStatus === "played"
               ? "bg-[#1a1a1a]/80 text-[#737373]"
               : "bg-[#1a1a1a]/80 text-[#a3a3a3]"
-          }`}
+            }`}
         >
           <Clock className="w-3 h-3" />
           {effectiveStatus === "playing"
             ? formatElapsed(elapsed)
-            : `${formatUTC(start)} UTC`}
+            : `${formatLocal(start)} — ${formatLocal(end)}`}
         </div>
 
         {/* LIVE BADGE */}
@@ -179,13 +176,8 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0 }: A
             }}
           >
             <div className="border-t border-[#dc2626]/40 pt-3">
-              <p className="text-xs text-[#a3a3a3] leading-relaxed mb-2">
+              <p className="text-xs text-[#a3a3a3] leading-relaxed">
                 {artist.description}
-              </p>
-              <p className="text-[11px] text-[#9ca3af] leading-relaxed">
-                {artist.name} подготовил специальный сет эксклюзивно для AGILE
-                RADIO: редкие треки, экспериментальные переходы и уникальная
-                атмосфера из {artist.location.toLowerCase()}.
               </p>
             </div>
           </div>

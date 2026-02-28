@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -15,27 +15,51 @@ import {
   Info,
 } from "lucide-react"
 import { zeroPrime } from "@/app/fonts"
-import { DAY_LABELS } from "@/lib/artists-data"
 import type { Artist } from "@/lib/artists-data"
 import { useArtists } from "@/lib/use-artists"
+import { useAudioEngine } from "@/hooks/use-audio-engine"
+
+function findCurrentArtistIndex(artists: { startTime: string; endTime: string }[]): number {
+  const now = Date.now()
+  return artists.findIndex((a) => {
+    const s = new Date(a.startTime).getTime()
+    const e = new Date(a.endTime).getTime()
+    return now >= s && now < e
+  })
+}
+
+function calcProgress(artist: { startTime: string; endTime: string }): number {
+  const now = Date.now()
+  const s = new Date(artist.startTime).getTime()
+  const e = new Date(artist.endTime).getTime()
+  if (now < s || e <= s) return 0
+  if (now >= e) return 1
+  return (now - s) / (e - s)
+}
 
 export function MobileRadio() {
   const { artists, ready } = useArtists()
-  const [isPlaying, setIsPlaying] = useState(true)
-  const [volume, setVolume] = useState(75)
   const [showVolume, setShowVolume] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [prevVolume, setPrevVolume] = useState(75)
-  const [currentPlayingIndex] = useState(5)
-  const [progress, setProgress] = useState(0.35)
-  const [viewIndex, setViewIndex] = useState(5)
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState(-1)
+  const [progress, setProgress] = useState(0)
+  const [viewIndex, setViewIndex] = useState(0)
   const [expanded, setExpanded] = useState(false)
   const [currentTime, setCurrentTime] = useState("")
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchDelta, setTouchDelta] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const listenerCount = 192
-  const TOTAL = artists.length || 1
+
+  // Sort by startTime
+  const sortedArtists = useMemo(
+    () => [...artists].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+    [artists]
+  )
+  const TOTAL = sortedArtists.length || 1
+
+  // Audio engine
+  const { isPlaying, volume, isMuted, togglePlay, setVolume, setIsMuted } =
+    useAudioEngine(sortedArtists)
 
   // Clock
   useEffect(() => {
@@ -50,22 +74,37 @@ export function MobileRadio() {
     return () => clearInterval(interval)
   }, [])
 
-  // Progress
+  // Real-time artist tracking
   useEffect(() => {
-    if (!isPlaying || !ready) return
-    const interval = setInterval(() => {
-      setProgress((p) => (p >= 1 ? 0 : p + 0.0005))
-    }, 100)
+    if (!ready || !sortedArtists.length) return
+    const tick = () => {
+      const idx = findCurrentArtistIndex(sortedArtists)
+      setCurrentPlayingIndex(idx)
+      if (idx >= 0) setProgress(calcProgress(sortedArtists[idx]))
+      else setProgress(0)
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [isPlaying, ready])
+  }, [sortedArtists, ready])
 
   const getStatus = useCallback(
     (i: number): "played" | "playing" | "upcoming" => {
-      if (i < currentPlayingIndex) return "played"
-      if (i === currentPlayingIndex) return "playing"
+      if (currentPlayingIndex >= 0) {
+        if (i < currentPlayingIndex) return "played"
+        if (i === currentPlayingIndex) return "playing"
+        return "upcoming"
+      }
+      const a = sortedArtists[i]
+      if (!a) return "upcoming"
+      const now = Date.now()
+      const e = new Date(a.endTime).getTime()
+      const s = new Date(a.startTime).getTime()
+      if (now > e) return "played"
+      if (now >= s) return "playing"
       return "upcoming"
     },
-    [currentPlayingIndex]
+    [currentPlayingIndex, sortedArtists]
   )
 
   const navigate = (dir: -1 | 1) => {
@@ -94,24 +133,17 @@ export function MobileRadio() {
   }
 
   const handleMuteToggle = () => {
-    if (isMuted) {
-      setVolume(prevVolume)
-      setIsMuted(false)
-    } else {
-      setPrevVolume(volume)
-      setVolume(0)
-      setIsMuted(true)
-    }
+    setIsMuted(!isMuted)
   }
 
-  if (!ready || !artists.length) {
+  if (!ready || !sortedArtists.length) {
     return null
   }
 
-  const artist = artists[viewIndex]
+  const artist = sortedArtists[viewIndex]
   const status = getStatus(viewIndex)
-  const prevArtist = artists[((viewIndex - 1) % TOTAL + TOTAL) % TOTAL]
-  const nextArtist = artists[(viewIndex + 1) % TOTAL]
+  const prevArtist = sortedArtists[((viewIndex - 1) % TOTAL + TOTAL) % TOTAL]
+  const nextArtist = sortedArtists[(viewIndex + 1) % TOTAL]
 
   const getTimeDisplay = (a: Artist, s: "played" | "playing" | "upcoming") => {
     if (s === "playing") {
@@ -232,9 +264,8 @@ export function MobileRadio() {
                 src={artist.image}
                 alt={artist.name}
                 fill
-                className={`object-cover transition-all duration-500 ${
-                  status === "played" ? "grayscale brightness-50" : ""
-                }`}
+                className={`object-cover transition-all duration-500 ${status === "played" ? "grayscale brightness-50" : ""
+                  }`}
                 sizes="300px"
                 priority
               />
@@ -315,7 +346,10 @@ export function MobileRadio() {
           <div className="mt-2 flex items-center gap-1.5 justify-center">
             <div className="w-1.5 h-1.5 rotate-45 bg-[#dc2626]" />
             <span className="text-[9px] font-mono uppercase tracking-[0.15em] text-[#737373]">
-              {DAY_LABELS[artist.dayIndex]}
+              {new Date(artist.startTime).toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "long",
+              }).toUpperCase()}
             </span>
           </div>
         </div>
@@ -341,8 +375,8 @@ export function MobileRadio() {
       <div className="bg-[#0a0a0a] border-t border-[#2a2a2a] px-3 py-2 z-20">
         {/* Mini timeline */}
         <div className="flex items-end gap-px h-4 mb-2">
-          {artists.map((_, i) => {
-            const isPlayed = i < currentPlayingIndex
+          {sortedArtists.map((_, i) => {
+            const isPlayed = currentPlayingIndex >= 0 && i < currentPlayingIndex
             const isCurrentPlaying = i === currentPlayingIndex
             const isViewing = i === viewIndex
             return (
@@ -352,13 +386,12 @@ export function MobileRadio() {
                   setViewIndex(i)
                   setExpanded(false)
                 }}
-                className={`flex-1 rounded-t-sm transition-all duration-200 ${
-                  isCurrentPlaying
-                    ? "bg-[#dc2626] h-full"
-                    : isPlayed
+                className={`flex-1 rounded-t-sm transition-all duration-200 ${isCurrentPlaying
+                  ? "bg-[#dc2626] h-full"
+                  : isPlayed
                     ? "bg-[#737373] h-3/5"
                     : "bg-[#2a2a2a] h-2/5"
-                } ${isViewing ? "ring-1 ring-[#e5e5e5]" : ""}`}
+                  } ${isViewing ? "ring-1 ring-[#e5e5e5]" : ""}`}
                 style={{ minHeight: "3px" }}
                 aria-label={`Артист ${i + 1}`}
               />
@@ -381,7 +414,7 @@ export function MobileRadio() {
 
           {/* Play button */}
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={togglePlay}
             className="w-12 h-12 flex items-center justify-center rounded-full bg-[#dc2626] text-[#ffffff] active:scale-95 transition-transform shadow-lg shadow-[#dc2626]/20"
             aria-label={isPlaying ? "Пауза" : "Воспроизведение"}
           >

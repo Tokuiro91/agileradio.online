@@ -16,8 +16,16 @@ const jetbrainsMono = JetBrains_Mono({
 
 /* Metadata */
 export const metadata: Metadata = {
-  title: "Agile Radio Online ",
+  title: "Agile Radio Online",
   description: "Live online radio with curated DJ sets and electronic music",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 }
 
 /* Viewport */

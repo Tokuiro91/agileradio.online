@@ -16,10 +16,10 @@ export function useArtists() {
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) return parsed as Artist[]
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as Artist[]
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
     return generateArtists()
   }, [])
@@ -29,35 +29,86 @@ export function useArtists() {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     } catch {
-      // ignore quota / serialization errors
+      // ignore
     }
   }, [])
 
-  // Публичный setter: обновляет state и сразу сохраняет в localStorage
-  const setArtistsPersisted: React.Dispatch<React.SetStateAction<Artist[]>> =
-    useCallback((action) => {
-      setArtistsState((prev) => {
-        const next =
-          typeof action === "function"
-            ? (action as (prevState: Artist[]) => Artist[])(prev)
-            : action
-        writeToStorage(next)
-        return next
+  const persistToServer = useCallback(async (next: Artist[]) => {
+    try {
+      await fetch("/api/artists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
       })
-    }, [writeToStorage])
+    } catch {
+      // non-critical — data is still in localStorage
+    }
+  }, [])
 
-  // Первичная загрузка
+  // Public setter: update state + localStorage + server
+  const setArtistsPersisted: React.Dispatch<React.SetStateAction<Artist[]>> =
+    useCallback(
+      (action) => {
+        setArtistsState((prev) => {
+          const next =
+            typeof action === "function"
+              ? (action as (prevState: Artist[]) => Artist[])(prev)
+              : action
+          writeToStorage(next)
+          persistToServer(next)
+          return next
+        })
+      },
+      [writeToStorage, persistToServer]
+    )
+
+  // Initial load: server first, then localStorage fallback
   useEffect(() => {
-    const initial = readFromStorage()
-    setArtistsState(initial)
-    setReady(true)
-  }, [readFromStorage])
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch("/api/artists")
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data) && data.length > 0 && !cancelled) {
+            setArtistsState(data)
+            writeToStorage(data)
+            setReady(true)
+            return
+          }
+        }
+      } catch {
+        // fall through to localStorage
+      }
+      if (!cancelled) {
+        const initial = readFromStorage()
+        setArtistsState(initial)
+        setReady(true)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [readFromStorage, writeToStorage])
 
-  // Синхронизация между вкладками + при фокусе окна
+  // Sync across tabs + on focus
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const sync = () => {
+    const sync = async () => {
+      try {
+        const res = await fetch("/api/artists")
+        if (res.ok) {
+          const data = await res.json()
+          if (Array.isArray(data) && data.length > 0) {
+            setArtistsState(data)
+            writeToStorage(data)
+            setReady(true)
+            return
+          }
+        }
+      } catch {
+        // ignore
+      }
       const next = readFromStorage()
       setArtistsState(next)
       setReady(true)
@@ -70,15 +121,12 @@ export function useArtists() {
 
     window.addEventListener("storage", onStorage)
     window.addEventListener("focus", sync)
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") sync()
-    })
 
     return () => {
       window.removeEventListener("storage", onStorage)
       window.removeEventListener("focus", sync)
     }
-  }, [readFromStorage])
+  }, [readFromStorage, writeToStorage])
 
   return {
     artists,
@@ -86,4 +134,3 @@ export function useArtists() {
     ready,
   }
 }
-
