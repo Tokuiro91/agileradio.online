@@ -2,17 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Image from "next/image"
-import Link from "next/link"
 import {
   Play,
   Pause,
   Volume2,
   VolumeX,
-  Users,
   Clock,
   ChevronLeft,
   ChevronRight,
-  Info,
 } from "lucide-react"
 import { zeroPrime } from "@/app/fonts"
 import type { Artist } from "@/lib/artists-data"
@@ -48,7 +45,7 @@ export function MobileRadio() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchDelta, setTouchDelta] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
-  const listenerCount = 192
+
 
   // Sort by startTime
   const sortedArtists = useMemo(
@@ -169,14 +166,7 @@ export function MobileRadio() {
         >
           A<span className="text-red-600">G</span>ILE
         </h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin"
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1f1f1f] text-[#a3a3a3] text-[10px] uppercase tracking-[0.15em]"
-          >
-            <Info className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+
       </header>
 
       {/* Time displays */}
@@ -401,15 +391,9 @@ export function MobileRadio() {
 
         {/* Controls row */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-[10px] text-[#737373] font-mono">
-              <Users className="w-3 h-3" />
-              {listenerCount}
-            </div>
-            <div className="flex items-center gap-1 text-[10px] text-[#737373] font-mono">
-              <Clock className="w-3 h-3" />
-              {viewIndex + 1}/{TOTAL}
-            </div>
+          <div className="flex items-center gap-1 text-[10px] text-[#737373] font-mono">
+            <Clock className="w-3 h-3" />
+            {viewIndex + 1}/{TOTAL}
           </div>
 
           {/* Play button */}
