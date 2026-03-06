@@ -56,7 +56,7 @@ export function RadioPlayer() {
     () => [...artists].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
     [artists]
   )
-  const TOTAL_CARDS = sortedArtists.length || 1
+  const TOTAL_CARDS = sortedArtists.length
 
   // ── Audio engine — shared play/pause, volume, scheduled audio ─────────────
   const {
@@ -67,6 +67,9 @@ export function RadioPlayer() {
     setVolume,
     setIsMuted,
   } = useAudioEngine(sortedArtists)
+
+  // Move guard here to prevent logic below it from crashing
+  if (!ready || !sortedArtists.length) return null
 
   // ── Real-time tracking: currentPlayingIndex + progress every second ────────
   useEffect(() => {

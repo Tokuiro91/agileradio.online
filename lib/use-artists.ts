@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { generateArtists } from "@/lib/artists-data"
 import type { Artist } from "@/lib/artists-data"
 
@@ -9,31 +9,18 @@ const STORAGE_KEY = "agile_artists"
 export function useArtists() {
   const [artists, setArtistsState] = useState<Artist[]>([])
   const [ready, setReady] = useState(false)
-
-  const readFromStorage = useCallback((): Artist[] => {
-    if (typeof window === "undefined") return generateArtists()
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed as Artist[]
-      }
-    } catch {
-      // ignore
-    }
-    return generateArtists()
-  }, [])
+  const isInitialMount = useRef(true)
 
   const writeToStorage = useCallback((next: Artist[]) => {
     if (typeof window === "undefined") return
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Local storage save error:", err)
     }
   }, [])
 
-  const persistToServer = useCallback(async (next: Artist[]): Promise<{ ok: boolean; error?: string }> => {
+  const persistToServer = useCallback(async (next: Artist[]) => {
     try {
       const res = await fetch("/api/artists?t=" + Date.now(), {
         method: "POST",
@@ -43,35 +30,16 @@ export function useArtists() {
         },
         body: JSON.stringify(next),
       })
-      if (res.ok) {
-        // After successful POST, re-read to confirm
-        return { ok: true }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        console.error("Server persistence error:", data.error || res.statusText)
       }
-      const data = await res.json().catch(() => ({}))
-      return { ok: false, error: data.error ?? `Ошибка сервера (${res.status})` }
-    } catch {
-      return { ok: false, error: "Нет соединения с сервером" }
+    } catch (err) {
+      console.error("Server connection error:", err)
     }
   }, [])
 
-  // Public setter: update state + localStorage + server
-  const setArtistsPersisted: React.Dispatch<React.SetStateAction<Artist[]>> =
-    useCallback(
-      (action) => {
-        setArtistsState((prev) => {
-          const next = typeof action === "function"
-            ? (action as any)(prev)
-            : action
-
-          writeToStorage(next)
-          persistToServer(next)
-          return next
-        })
-      },
-      [writeToStorage, persistToServer]
-    )
-
-  // Initial load: server first, then localStorage fallback
+  // Initial load
   useEffect(() => {
     let cancelled = false
     const load = async () => {
@@ -81,69 +49,83 @@ export function useArtists() {
         })
         if (res.ok) {
           const data = await res.json()
-          if (Array.isArray(data) && data.length > 0 && !cancelled) {
+          if (Array.isArray(data) && !cancelled) {
             setArtistsState(data)
             writeToStorage(data)
             setReady(true)
+            isInitialMount.current = false
             return
           }
         }
-      } catch {
-        // fall through to localStorage
+      } catch (err) {
+        console.error("Initial load error:", err)
       }
+
       if (!cancelled) {
-        const initial = readFromStorage()
-        setArtistsState(initial)
+        // Fallback to storage
+        if (typeof window !== "undefined") {
+          const raw = window.localStorage.getItem(STORAGE_KEY)
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw)
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setArtistsState(parsed)
+              } else {
+                setArtistsState(generateArtists())
+              }
+            } catch {
+              setArtistsState(generateArtists())
+            }
+          } else {
+            setArtistsState(generateArtists())
+          }
+        }
         setReady(true)
+        isInitialMount.current = false
       }
     }
     load()
     return () => { cancelled = true }
-  }, [readFromStorage, writeToStorage])
+  }, [writeToStorage])
 
-  // Sync across tabs + on focus
+  // Sync across tabs
   useEffect(() => {
     if (typeof window === "undefined") return
-
-    const sync = async () => {
-      try {
-        const res = await fetch("/api/artists?t=" + Date.now(), {
-          headers: { "Cache-Control": "no-cache" }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data) && data.length > 0) {
-            setArtistsState(data)
-            writeToStorage(data)
-            setReady(true)
-            return
-          }
-        }
-      } catch {
-        // ignore
-      }
-      const next = readFromStorage()
-      setArtistsState(next)
-      setReady(true)
-    }
-
     const onStorage = (e: StorageEvent) => {
       if (e.key !== STORAGE_KEY) return
-      sync()
+      if (e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue)
+          if (Array.isArray(parsed)) setArtistsState(parsed)
+        } catch { }
+      }
     }
-
     window.addEventListener("storage", onStorage)
-    window.addEventListener("focus", sync)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
 
-    return () => {
-      window.removeEventListener("storage", onStorage)
-      window.removeEventListener("focus", sync)
-    }
-  }, [readFromStorage, writeToStorage])
+  // Public setter
+  const setArtists: React.Dispatch<React.SetStateAction<Artist[]>> = useCallback((action) => {
+    setArtistsState((prev) => {
+      const next = typeof action === "function" ? (action as any)(prev) : action
+
+      // Schedule side effects outside of the React render loop/updater
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+          } catch { }
+          persistToServer(next)
+        }, 0)
+      }
+
+      return next
+    })
+  }, [persistToServer])
 
   return {
     artists,
-    setArtists: setArtistsPersisted,
+    setArtists,
     ready,
   }
 }
