@@ -122,8 +122,8 @@ export function Header({
           </SheetTrigger>
           <SheetContent side="right" className="bg-[#0a0a0a] border-l border-[#2a2a2a] text-white">
             <SheetHeader>
-              <SheetTitle className="text-[#99CCCC] font-mono font-bold text-2xl tracking-wider">
-                K<span className="text-white">Ø</span>DE
+              <SheetTitle className="text-[#99CCCC] font-tektur font-bold text-2xl tracking-wider">
+                BØDEN STADT
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-6 mt-12">
