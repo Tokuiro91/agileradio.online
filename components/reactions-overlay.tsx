@@ -23,10 +23,10 @@ function FloatingReaction({ reaction, onDone }: { reaction: Reaction; onDone: ()
         // Animate: float upward over 3s, fade in quickly then fade out near top
         el.animate(
             [
-                { transform: "translateY(-20vh) translateX(0) scale(0.6)", opacity: 0 },
-                { transform: "translateY(-35vh) translateX(calc(var(--drift) * 0.2)) scale(1.2)", opacity: 1, offset: 0.08 },
-                { transform: "translateY(-80vh) translateX(calc(var(--drift) * 0.7)) scale(1)", opacity: 0.9, offset: 0.7 },
-                { transform: "translateY(-110vh) translateX(var(--drift)) scale(0.8)", opacity: 0 },
+                { transform: "translateY(0) translateX(0) scale(0.6)", opacity: 0 },
+                { transform: "translateY(-20px) translateX(calc(var(--drift) * 0.2)) scale(1.2)", opacity: 1, offset: 0.08 },
+                { transform: "translateY(-60vh) translateX(calc(var(--drift) * 0.7)) scale(1)", opacity: 0.9, offset: 0.7 },
+                { transform: "translateY(-90vh) translateX(var(--drift)) scale(0.8)", opacity: 0 },
             ],
             {
                 duration: 3000 + Math.random() * 1000,
@@ -43,7 +43,7 @@ function FloatingReaction({ reaction, onDone }: { reaction: Reaction; onDone: ()
     return (
         <div
             ref={ref}
-            className="absolute bottom-20 pointer-events-none select-none"
+            className="absolute bottom-32 pointer-events-none select-none"
             style={{
                 willChange: "transform, opacity",
                 zIndex: 9998,
