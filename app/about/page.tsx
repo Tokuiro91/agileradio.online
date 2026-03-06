@@ -7,7 +7,7 @@ export default function AboutPage() {
         <div className="min-h-screen bg-[#0a0a0a] text-white p-4 pt-32 pb-20 max-w-2xl mx-auto space-y-12">
             <header className="space-y-4">
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-[#99CCCC] font-mono">
-                    <SolariText text="KØDE RADIO" />
+                    <SolariText text="BØDEN STADT RADIO" />
                 </h1>
                 <p className="text-xl md:text-2xl text-[#a3a3a3] font-mono leading-tight uppercase">
                     Independent broadcasting from the edge of culture.
@@ -18,7 +18,7 @@ export default function AboutPage() {
                 <section className="space-y-4">
                     <h2 className="text-white font-mono uppercase text-sm tracking-widest">The Mission</h2>
                     <p>
-                        KØDE is more than just a radio station. It is a digital playground for sonic explorers,
+                        BØDEN STADT is more than just a radio station. It is a digital playground for sonic explorers,
                         a platform for voices that refuse to be quieted, and a bridge between global
                         electronic communities.
                     </p>
@@ -36,7 +36,7 @@ export default function AboutPage() {
                 <section className="space-y-4">
                     <h2 className="text-white font-mono uppercase text-sm tracking-widest">Global Connection</h2>
                     <p>
-                        Broadcasting from Tbilisi to the world, we embrace the diversity of sound
+                        Broadcasting from world to the world, we embrace the diversity of sound
                         and the unity of rhythm. Every set is a story, every beat is a heartbeat.
                     </p>
                 </section>
@@ -44,7 +44,7 @@ export default function AboutPage() {
 
             <footer className="pt-12 border-t border-[#2a2a2a]">
                 <p className="text-[10px] uppercase font-mono tracking-[0.3em] text-[#444]">
-                    EST. 2024 — TBILISI / WORLDWIDE
+                    EST. 2026 — WORLDWIDE
                 </p>
             </footer>
         </div>

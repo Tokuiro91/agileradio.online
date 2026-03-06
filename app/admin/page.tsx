@@ -7,6 +7,7 @@ import { useArtists } from "@/lib/use-artists"
 import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { AnalyticsDashboard } from "@/components/analytics-dashboard"
+import { StickerPackManager } from "@/components/sticker-pack-manager"
 
 function formatDuration(ms: number) {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -51,7 +52,7 @@ export default function AdminPage() {
   }, [status, router])
 
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState<"artists" | "admins" | "analytics">("analytics")
+  const [activeTab, setActiveTab] = useState<"artists" | "admins" | "analytics" | "stickers">("analytics")
   const [formError, setFormError] = useState("")
 
   // Form state
@@ -254,12 +255,15 @@ export default function AdminPage() {
       <header className="border-b border-[#2a2a2a] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <h1 className="text-lg font-semibold tracking-wide">
-            KØDE <span className="text-[#737373]">/ ADMIN</span>
+            BØDEN STADT <span className="text-[#737373]">/ ADMIN</span>
           </h1>
           <div className="flex gap-1">
             <button onClick={() => setActiveTab("artists")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artists" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Артисты</button>
             <button onClick={() => setActiveTab("admins")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "admins" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Администраторы</button>
             <button onClick={() => setActiveTab("analytics")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "analytics" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Аналитика</button>
+            {isSuperAdmin && (
+              <button onClick={() => setActiveTab("stickers")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "stickers" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Стикеры</button>
+            )}
           </div>
         </div>
         <button onClick={() => signOut({ callbackUrl: "/admin/login" })} className="text-xs text-[#737373] hover:text-white transition px-3 py-1 border border-[#2a2a2a] rounded-sm">Выйти</button>
@@ -268,6 +272,12 @@ export default function AdminPage() {
       {activeTab === "analytics" && (
         <div className="p-6">
           <AnalyticsDashboard />
+        </div>
+      )}
+
+      {activeTab === "stickers" && isSuperAdmin && (
+        <div className="p-6 max-w-4xl max-h-[85vh] overflow-y-auto">
+          <StickerPackManager />
         </div>
       )}
 

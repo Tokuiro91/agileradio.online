@@ -56,7 +56,7 @@ export function Header({
       {/* LEFT */}
       <div className="flex items-center gap-4">
         <h1 className={`font-mono font-bold text-xl md:text-2xl tracking-wider text-[#99CCCC]`}>
-          K<span className="text-[#99CCCC]">Ø</span>DE
+          <span className="text-[#99CCCC]">BØDEN STADT</span>
         </h1>
         <div className="hidden md:flex items-center gap-2 text-xs text-[#737373] font-mono">
           <Clock className="w-3 h-3" />

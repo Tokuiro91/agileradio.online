@@ -107,6 +107,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (user) {
                 token.email = user.email
                 token.role = (user as any).role || "listener"
+                // For now, admins get Plus, or check listener DB object if we had it.
+                token.isPlusMember = (user as any).role === "admin" || (user as any).isPlusMember || false
             }
             return token
         },
@@ -114,6 +116,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (token.email) {
                 session.user.email = token.email as string
                 session.user.role = token.role as string
+                // @ts-ignore
+                session.user.isPlusMember = token.isPlusMember as boolean
             }
             return session
         },

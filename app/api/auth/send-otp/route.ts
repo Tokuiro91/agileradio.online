@@ -32,13 +32,13 @@ export async function POST(request: Request) {
         })
 
         await transporter.sendMail({
-            from: `"KØDE Admin" <${process.env.GMAIL_USER}>`,
+            from: `"BØDEN STADT Admin" <${process.env.GMAIL_USER}>`,
             to: normalizedEmail,
             subject: `Код входа: ${code}`,
-            text: `Ваш код для входа в панель администратора KØDE: ${code}\n\nКод действителен 10 минут.\n\nЕсли вы не запрашивали код — проигнорируйте это письмо.`,
+            text: `Ваш код для входа в панель администратора BØDEN STADT: ${code}\n\nКод действителен 10 минут.\n\nЕсли вы не запрашивали код — проигнорируйте это письмо.`,
             html: `
         <div style="font-family:monospace;background:#0a0a0a;color:#e5e5e5;padding:40px;max-width:400px;margin:0 auto;border-radius:8px;">
-          <p style="color:#737373;font-size:12px;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px;">KØDE / ADMIN</p>
+          <p style="color:#737373;font-size:12px;text-transform:uppercase;letter-spacing:0.15em;margin-bottom:8px;">BØDEN STADT / ADMIN</p>
           <h1 style="font-size:48px;letter-spacing:0.1em;color:#ffffff;margin:0 0 8px 0;">${code}</h1>
           <p style="color:#9ca3af;font-size:13px;margin:0 0 24px 0;">Код действителен <strong>10 минут</strong></p>
           <p style="color:#4b5563;font-size:11px;">Если вы не запрашивали код — проигнорируйте это письмо.</p>

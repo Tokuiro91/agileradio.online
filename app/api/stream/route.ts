@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
             headers: {
                 // Forward range requests if present (for seek support)
                 ...(req.headers.get("range") ? { range: req.headers.get("range")! } : {}),
-                "User-Agent": "Mozilla/5.0 KODE-Radio-Proxy/1.0",
+                "User-Agent": "Mozilla/5.0 BODEN-STADT-Radio-Proxy/1.0",
                 "Icy-MetaData": "0",
             },
             // @ts-ignore — disable Next.js cache for streams

@@ -74,7 +74,7 @@ export function SplashScreen({ onDone, duration = 3000 }: SplashScreenProps) {
                 <div className="relative w-12 h-12 rounded-full overflow-hidden">
                     <Image
                         src="/favicon.png"
-                        alt="KØDE"
+                        alt="BØDEN STADT"
                         fill
                         className="object-cover"
                         priority

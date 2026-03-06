@@ -1,4 +1,4 @@
-#!/bin/bash
+.#!/bin/bash
 # ============================================================
 #  Agile Radio — Deploy Script
 #  Использование: ./deploy.sh "Описание изменений"
@@ -24,8 +24,8 @@ else
   git commit -m "$COMMIT_MSG"
   echo "   ✅ Закоммичено: $COMMIT_MSG"
 fi
-git push origin main
-echo "   ✅ Push на GitHub выполнен"
+git push origin BODEN-STADT
+echo "   ✅ Push na GitHub выполнен"
 
 # ── 2. Обновляем сервер ──────────────────────────────────────
 echo ""
@@ -33,8 +33,10 @@ echo "🖥️  Шаг 2: Обновление VPS..."
 sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_IP" << 'ENDSSH'
   set -e
   cd /var/www/agileradio
-  echo "   → git pull..."
-  git pull origin main
+  echo "   → git checkout BODEN-STADT && pull..."
+  git fetch origin
+  git checkout BODEN-STADT
+  git pull origin BODEN-STADT
   echo "   → npm install..."
   npm ci --legacy-peer-deps --silent
   echo "   → next build..."
@@ -46,4 +48,4 @@ sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_IP" << 'E
 ENDSSH
 
 echo ""
-echo "✅ Деплой завершён! Сайт обновлён: https://agileradio.online"
+echo "✅ Деплой завершён! Сайт обновлён: https://bodenstadt.live"
