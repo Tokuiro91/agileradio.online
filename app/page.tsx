@@ -1,37 +1,36 @@
 "use client"
 
-import dynamic from "next/dynamic"
-
-const RadioPlayer = dynamic(() => import("@/components/radio-player").then(m => m.RadioPlayer), {
-  ssr: false,
-  loading: () => <LoadingView />
-})
-
-const MobileRadio = dynamic(() => import("@/components/mobile-radio").then(m => m.MobileRadio), {
-  ssr: false,
-  loading: () => <LoadingView />
-})
-
-function LoadingView() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4">
-      <h1 className="font-mono font-bold text-2xl tracking-wider text-[#99CCCC] animate-pulse">
-        K<span className="text-[#99CCCC]">Ø</span>DE
-      </h1>
-      <div className="w-8 h-8 border-2 border-[#99CCCC]/20 border-t-[#99CCCC] rounded-full animate-spin" />
-    </div>
-  )
-}
+import { useEffect, useState } from "react"
 
 export default function Page() {
+  const [artists, setArtists] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch("/api/artists")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setArtists(data)
+        else setError("Data is not an array")
+      })
+      .catch(err => setError(err.message))
+  }, [])
+
   return (
-    <>
-      <div className="hidden md:block">
-        <RadioPlayer />
+    <div className="p-8 bg-[#0a0a0a] min-h-screen text-white font-mono">
+      <h1 className="text-2xl mb-4 text-[#99CCCC]">DEBUG VIEW</h1>
+      {error && <p className="text-red-500 mb-4">Error: {error}</p>}
+      <div className="space-y-4">
+        {artists.map((a, i) => (
+          <div key={a.id || i} className="p-4 border border-[#2a2a2a]">
+            <p>ID: {a.id}</p>
+            <p>Name: {a.name}</p>
+            <p>Start: {a.startTime}</p>
+            <p>Type: {a.type || "artist"}</p>
+          </div>
+        ))}
       </div>
-      <div className="block md:hidden">
-        <MobileRadio />
-      </div>
-    </>
+      {artists.length === 0 && !error && <p>Loading artists...</p>}
+    </div>
   )
 }
