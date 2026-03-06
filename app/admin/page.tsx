@@ -8,6 +8,8 @@ import { signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { StickerPackManager } from "@/components/sticker-pack-manager"
+import type { DBArtist } from "@/lib/artist-db-store"
+import type { Listener } from "@/lib/listeners-store"
 
 function formatDuration(ms: number) {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -52,7 +54,7 @@ export default function AdminPage() {
   }, [status, router])
 
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [activeTab, setActiveTab] = useState<"artists" | "admins" | "analytics" | "stickers">("analytics")
+  const [activeTab, setActiveTab] = useState<"artists" | "admins" | "analytics" | "stickers" | "artist-db" | "listeners">("analytics")
   const [formError, setFormError] = useState("")
 
   // Form state
@@ -69,12 +71,19 @@ export default function AdminPage() {
   const [newAdminEmail, setNewAdminEmail] = useState("")
   const [adminError, setAdminError] = useState("")
 
+  const [dbArtists, setDbArtists] = useState<DBArtist[]>([])
+  const [listeners, setListeners] = useState<Listener[]>([])
+
   useEffect(() => {
-    fetch("/api/admins")
-      .then((r) => r.json())
-      .then((d) => d.admins && setAdminEmails(d.admins))
-      .catch(() => { })
+    fetch("/api/admins").then(r => r.json()).then(d => d.admins && setAdminEmails(d.admins)).catch(() => { })
+    fetch("/api/artist-db").then(r => r.json()).then(setDbArtists).catch(() => { })
   }, [])
+
+  useEffect(() => {
+    if (activeTab === "listeners" && listeners.length === 0) {
+      fetch("/api/listeners").then(r => r.json()).then(setListeners).catch(() => { })
+    }
+  }, [activeTab, listeners.length])
 
   const addAdmin = async () => {
     if (!newAdminEmail.includes("@")) {
@@ -258,8 +267,10 @@ export default function AdminPage() {
             <span className="font-tektur">BØDEN STADT</span> <span className="text-[#737373]">/ ADMIN</span>
           </h1>
           <div className="flex gap-1">
-            <button onClick={() => setActiveTab("artists")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artists" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Артисты</button>
+            <button onClick={() => setActiveTab("artists")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artists" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Расписание</button>
+            <button onClick={() => setActiveTab("artist-db")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artist-db" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>База Артистов</button>
             <button onClick={() => setActiveTab("admins")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "admins" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Администраторы</button>
+            <button onClick={() => setActiveTab("listeners")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "listeners" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Слушатели</button>
             <button onClick={() => setActiveTab("analytics")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "analytics" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Аналитика</button>
             {isSuperAdmin && (
               <button onClick={() => setActiveTab("stickers")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "stickers" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Стикеры</button>
@@ -307,6 +318,75 @@ export default function AdminPage() {
         </div>
       )}
 
+      {activeTab === "listeners" && (
+        <div className="px-6 py-6 max-w-4xl">
+          <h2 className="text-sm font-semibold mb-4 text-[#99CCCC] font-mono">РЕГИСТРАЦИИ ({listeners.length})</h2>
+          <div className="overflow-x-auto bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm">
+            <table className="w-full text-left text-xs text-[#e5e5e5]">
+              <thead className="bg-[#111] uppercase font-mono text-[10px] text-[#737373]">
+                <tr>
+                  <th className="px-4 py-3 border-b border-[#2a2a2a]">Имя</th>
+                  <th className="px-4 py-3 border-b border-[#2a2a2a]">Email</th>
+                  <th className="px-4 py-3 border-b border-[#2a2a2a]">Провайдер</th>
+                  <th className="px-4 py-3 border-b border-[#2a2a2a]">Роль</th>
+                  <th className="px-4 py-3 border-b border-[#2a2a2a]">Избранные</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listeners.map(l => (
+                  <tr key={l.id} className="border-b border-[#2a2a2a] hover:bg-[#111]">
+                    <td className="px-4 py-3 font-semibold">{l.name}</td>
+                    <td className="px-4 py-3 text-[#99CCCC]">{l.email}</td>
+                    <td className="px-4 py-3 uppercase text-[10px]">{l.provider}</td>
+                    <td className="px-4 py-3 uppercase text-[10px]">{l.role}</td>
+                    <td className="px-4 py-3 text-[10px] font-mono">{l.favoriteArtists?.length || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "artist-db" && (
+        <div className="px-6 py-6">
+          <h2 className="text-sm font-semibold mb-4 text-[#99CCCC] font-mono">БАЗА АРТИСТОВ ({dbArtists.length})</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div
+              className="border border-dashed border-[#2a2a2a] rounded-sm p-4 h-32 flex flex-col items-center justify-center cursor-pointer hover:border-[#99CCCC] transition group"
+              onClick={() => {
+                setActiveTab("artists")
+                setForm({ ...defaultForm })
+                setEditingId(null)
+                // When we have a dedicated form, we can just open it. For now direct to Schedule tab.
+              }}
+            >
+              <p className="text-[#737373] font-mono text-xs uppercase group-hover:text-[#99CCCC] text-center mb-1">+ Создать в расписании</p>
+              <p className="text-[9px] text-[#444] text-center px-4">Артисты автоматически добавляются в базу при сохранении в расписание</p>
+            </div>
+            {dbArtists.map(a => (
+              <div key={a.id} className="border border-[#2a2a2a] bg-[#0a0a0a] rounded-sm overflow-hidden flex flex-col group relative">
+                <div className="w-full h-32 relative bg-[#111]">
+                  {a.image && <Image src={a.image} alt={a.name} fill className="object-cover" unoptimized />}
+                </div>
+                <div className="p-3">
+                  <h3 className="font-bold text-[11px] uppercase truncate">{a.name}</h3>
+                  <p className="text-[10px] text-[#737373] truncate w-full">{a.show}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    fetch(`/api/artist-db?id=${a.id}`, { method: "DELETE" }).then(() => setDbArtists(curr => curr.filter(x => x.id !== a.id)))
+                  }}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500/80 text-white rounded-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {activeTab === "artists" && (
         <main className="px-6 py-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="flex-1">
@@ -323,6 +403,38 @@ export default function AdminPage() {
                     <button type="button" onClick={() => setForm(f => ({ ...f, type: 'artist' }))} className={`flex-1 py-1.5 text-[10px] font-mono border rounded-sm transition ${form.type === 'artist' ? 'bg-white text-black border-white' : 'border-[#2a2a2a] text-[#737373]'}`}>ARTIST</button>
                     <button type="button" onClick={() => setForm(f => ({ ...f, type: 'ad' }))} className={`flex-1 py-1.5 text-[10px] font-mono border rounded-sm transition ${form.type === 'ad' ? 'bg-[#99CCCC] text-black border-[#99CCCC]' : 'border-[#2a2a2a] text-[#737373]'}`}>ADVERTISEMENT</button>
                   </div>
+                </div>
+              )}
+
+              {form.type === 'artist' && dbArtists.length > 0 && !editingId && (
+                <div>
+                  <label className="block mb-2 text-[10px] uppercase font-mono text-[#99CCCC]">Выбрать из Базы</label>
+                  <select
+                    className="w-full bg-[#111] border border-[#2a2a2a] rounded-sm px-2 py-2 text-xs outline-none focus:border-[#e5e5e5] text-white"
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      const a = dbArtists.find(x => x.id === e.target.value);
+                      if (a) {
+                        setForm(f => ({
+                          ...f,
+                          name: a.name,
+                          location: a.location,
+                          show: a.show,
+                          image: a.image,
+                          audioUrl: a.audioUrl || "",
+                          description: a.description,
+                          instagramUrl: a.instagramUrl || "",
+                          soundcloudUrl: a.soundcloudUrl || "",
+                          bandcampUrl: a.bandcampUrl || "",
+                        }))
+                      }
+                    }}
+                  >
+                    <option value="">-- Новый Артист --</option>
+                    {dbArtists.map(a => (
+                      <option key={a.id} value={a.id}>{a.name} ({a.show})</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
@@ -429,7 +541,8 @@ export default function AdminPage() {
             </div>
           </section>
         </main>
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }

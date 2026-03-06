@@ -1,0 +1,67 @@
+import fs from "fs"
+import path from "path"
+
+const DB_FILE = path.join(process.cwd(), "data", "artist-db.json")
+
+export interface DBArtist {
+    id: string
+    name: string
+    location: string
+    show: string
+    image: string
+    description: string
+    audioUrl?: string
+    instagramUrl?: string
+    soundcloudUrl?: string
+    bandcampUrl?: string
+    isLottie?: boolean
+}
+
+function ensureDirectoryExistence(filePath: string) {
+    const dirname = path.dirname(filePath)
+    if (fs.existsSync(dirname)) return
+    fs.mkdirSync(dirname, { recursive: true })
+}
+
+export function getArtistDB(): DBArtist[] {
+    try {
+        ensureDirectoryExistence(DB_FILE)
+        if (!fs.existsSync(DB_FILE)) return []
+        const content = fs.readFileSync(DB_FILE, "utf-8")
+        return JSON.parse(content) as DBArtist[]
+    } catch {
+        return []
+    }
+}
+
+export function saveArtistDB(artists: DBArtist[]) {
+    ensureDirectoryExistence(DB_FILE)
+    fs.writeFileSync(DB_FILE, JSON.stringify(artists, null, 2))
+}
+
+export function createDBArtist(data: Omit<DBArtist, "id">): DBArtist {
+    const artists = getArtistDB()
+    const newArtist: DBArtist = {
+        ...data,
+        id: Date.now().toString(),
+    }
+    artists.push(newArtist)
+    saveArtistDB(artists)
+    return newArtist
+}
+
+export function updateDBArtist(id: string, updates: Partial<DBArtist>): DBArtist | undefined {
+    const artists = getArtistDB()
+    const index = artists.findIndex(a => a.id === id)
+    if (index === -1) return undefined
+
+    artists[index] = { ...artists[index], ...updates }
+    saveArtistDB(artists)
+    return artists[index]
+}
+
+export function deleteDBArtist(id: string) {
+    let artists = getArtistDB()
+    artists = artists.filter(a => a.id !== id)
+    saveArtistDB(artists)
+}

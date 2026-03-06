@@ -37,7 +37,13 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white p-4 pt-24 pb-20 max-w-2xl mx-auto">
             <div className="space-y-8">
-                <header className="flex items-center justify-between border-b border-[#2a2a2a] pb-6">
+                <header className="flex flex-col gap-6 border-b border-[#2a2a2a] pb-6">
+                    <div className="flex items-center justify-between">
+                        <Button variant="ghost" className="text-[#99CCCC] hover:text-white font-mono hover:bg-transparent px-0" onClick={() => router.push("/")}>
+                            ← BACK TO RADIO
+                        </Button>
+                        <Button variant="outline" className="border-[#2a2a2a] hover:bg-[#1a1a1a]">EDIT PROFILE</Button>
+                    </div>
                     <div className="flex items-center gap-4">
                         <Avatar className="w-20 h-20 border-2 border-[#99CCCC]">
                             <AvatarImage src={profile.avatar} />
@@ -50,7 +56,6 @@ export default function ProfilePage() {
                             <p className="text-[#737373] text-sm uppercase font-mono">{session.user?.role}</p>
                         </div>
                     </div>
-                    <Button variant="outline" className="border-[#2a2a2a] hover:bg-[#1a1a1a]">EDIT PROFILE</Button>
                 </header>
 
                 {/* NOTIFICATIONS */}

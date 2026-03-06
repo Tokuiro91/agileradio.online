@@ -41,9 +41,16 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-4 pt-20">
             <div className="w-full max-w-md bg-[#111] border border-[#2a2a2a] rounded-sm p-8 shadow-2xl">
-                <h1 className="text-3xl font-bold mb-8 text-[#99CCCC] font-mono tracking-tighter">
-                    <SolariText text="LOGIN" />
-                </h1>
+                <div className="flex items-center gap-4 mb-8">
+                    <Link href="/" className="text-[#737373] hover:text-white transition-colors" aria-label="Back to radio">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                    </Link>
+                    <h1 className="text-3xl font-bold text-[#99CCCC] font-mono tracking-tighter">
+                        <SolariText text="LOGIN" />
+                    </h1>
+                </div>
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>

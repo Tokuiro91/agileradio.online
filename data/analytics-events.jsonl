@@ -885,3 +885,6 @@
 {"sessionId":"39b49ffe-9a53-49dd-b772-262be2941425","timestamp":1772819368968,"type":"pause"}
 {"sessionId":"c437a2bc-1b33-4d26-8843-5ceea90be412","timestamp":1772819383018,"type":"pause"}
 {"sessionId":"c3d9341d-faba-4927-9516-2710b36d21c7","timestamp":1772819389485,"type":"pause"}
+{"sessionId":"c1063728-6839-4636-a466-d39b84cd5a20","timestamp":1772824358049,"type":"pause"}
+{"sessionId":"c1063728-6839-4636-a466-d39b84cd5a20","timestamp":1772824365458,"type":"pause"}
+{"sessionId":"c1063728-6839-4636-a466-d39b84cd5a20","timestamp":1772824367699,"type":"pageview","path":"/admin"}

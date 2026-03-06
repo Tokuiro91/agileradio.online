@@ -67,7 +67,7 @@ export function StickerPackManager() {
             if (p.id === packId) {
                 return {
                     ...p,
-                    stickers: [...p.stickers, { id: `s_${Date.now()}`, type: "emoji", value: "😊" }]
+                    stickers: [...p.stickers, { id: `s_${Date.now()}`, type: "emoji" as const, value: "😊" }]
                 }
             }
             return p
