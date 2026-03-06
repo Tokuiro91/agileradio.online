@@ -9,6 +9,11 @@
   }
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 :root {
   --background: #0a0a0a;
   --foreground: #e5e5e5;

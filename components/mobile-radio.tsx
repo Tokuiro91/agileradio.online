@@ -267,9 +267,9 @@ export function MobileRadio() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0a] overflow-hidden select-none">
+    <div className="flex flex-col h-[100dvh] w-full bg-[#0a0a0a] overflow-hidden select-none">
       {/* Mobile Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-[#2a2a2a] z-20">
+      <header className="flex items-center justify-between px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] bg-[#0a0a0a] border-b border-[#2a2a2a] z-20">
         <h1 className="font-mono font-bold text-xl tracking-wider text-[#e5e5e5]">
           K<span className="text-[#99CCCC]">Ø</span>DE
         </h1>
@@ -578,7 +578,7 @@ export function MobileRadio() {
       </div>
 
       {/* Bottom control bar */}
-      <div className="bg-[#0a0a0a] border-t border-[#2a2a2a] px-3 py-2 z-20">
+      <div className="bg-[#0a0a0a] border-t border-[#2a2a2a] px-3 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] z-20">
         {/* Mini timeline */}
         <div className="flex items-end gap-px h-4 mb-2">
           {sortedArtists.map((_, i) => {
