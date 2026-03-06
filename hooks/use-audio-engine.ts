@@ -18,6 +18,18 @@ function isExternalUrl(url: string) {
     return url.startsWith("http://") || url.startsWith("https://")
 }
 
+/**
+ * If we're on HTTPS and the stream is HTTP, route it through the
+ * server-side proxy at /api/stream to avoid mixed-content blocking.
+ */
+function resolveStreamUrl(url: string): string {
+    if (typeof window === "undefined") return url
+    if (url.startsWith("http://") && window.location.protocol === "https:") {
+        return `/api/stream?src=${encodeURIComponent(url)}`
+    }
+    return url
+}
+
 function findActiveArtist(artists: Artist[]): Artist | null {
     const now = getSyncedTime()
     return artists.find((a) => {
@@ -138,25 +150,25 @@ export function useAudioEngine(artists: Artist[]) {
     const startTrack = useCallback(async (artist: Artist) => {
         const audio = audioRef.current
         if (!audio) return
-        const url = artist.audioUrl!
-        const external = isExternalUrl(url)
+        const rawUrl = artist.audioUrl!
+        const url = resolveStreamUrl(rawUrl)  // transparently proxy HTTP→HTTPS if needed
+        const external = isExternalUrl(rawUrl)
 
         // Detect live streams (AzuraCast, Icecast, etc.)
         // These cannot be seeked and should be played as-is via direct src load
         const isLiveStream = external && (
-            url.includes('/radio/') ||
-            url.includes('/stream') ||
-            url.includes('.mp3') ||
-            url.includes('.aac') ||
-            url.includes('.ogg') ||
-            url.includes('/listen/')
+            rawUrl.includes('/radio/') ||
+            rawUrl.includes('/stream') ||
+            rawUrl.includes('.mp3') ||
+            rawUrl.includes('.aac') ||
+            rawUrl.includes('.ogg') ||
+            rawUrl.includes('/listen/')
         )
 
         updateMediaSession(artist)
 
         if (isLiveStream) {
-            // For live streams: just set src and play immediately
-            // Don't try to seek or preload
+            // For live streams: just set src and play immediately (no seek)
             if (audio.src !== url) {
                 audio.crossOrigin = 'anonymous'
                 audio.src = url
@@ -164,7 +176,7 @@ export function useAudioEngine(artists: Artist[]) {
             currentUrlRef.current = url
             preloadUrlRef.current = url
             audio.volume = isMutedRef.current ? 0 : volumeRef.current / 100
-            try { await audio.play() } catch (e) {
+            try { await audio.play() } catch {
                 // If crossOrigin fails, retry without it
                 audio.crossOrigin = ''
                 audio.src = url
