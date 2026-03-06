@@ -34,9 +34,11 @@ sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_IP" << 'E
   set -e
   cd /var/www/agileradio
   echo "   → git checkout BODEN-STADT && pull..."
+  git stash
   git fetch origin
   git checkout BODEN-STADT
   git pull origin BODEN-STADT
+  git stash pop || true
   echo "   → npm install..."
   npm ci --legacy-peer-deps --silent
   echo "   → next build..."
