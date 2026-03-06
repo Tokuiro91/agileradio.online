@@ -86,15 +86,23 @@ export function MobileRadio() {
   const [touchDelta, setTouchDelta] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
 
-  // Campaign visibility check for ads
-  const filteredArtists = useMemo(() => {
-    const nowMs = getSyncedTime()
-    return artists.filter(a => {
-      if (a.type !== 'ad') return true
-      const startMs = a.campaignStart ? new Date(a.campaignStart).getTime() : 0
-      const endMs = a.campaignEnd ? new Date(a.campaignEnd).getTime() : Infinity
-      return nowMs >= startMs && nowMs <= endMs
-    })
+  // Hydration-safe filtered artists
+  const [filteredArtists, setFilteredArtists] = useState<Artist[]>([])
+
+  useEffect(() => {
+    const update = () => {
+      const nowMs = getSyncedTime()
+      const next = artists.filter(a => {
+        if (a.type !== 'ad') return true
+        const startMs = a.campaignStart ? new Date(a.campaignStart).getTime() : 0
+        const endMs = a.campaignEnd ? new Date(a.campaignEnd).getTime() : Infinity
+        return nowMs >= startMs && nowMs <= endMs
+      })
+      setFilteredArtists(next)
+    }
+    update()
+    const interval = setInterval(update, 60000) // update campaign list every minute
+    return () => clearInterval(interval)
   }, [artists])
 
   // Sort by startTime

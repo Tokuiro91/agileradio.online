@@ -88,15 +88,16 @@ interface SolariTextProps {
  * Triggers automatically whenever `text` changes.
  */
 export function SolariText({
-    text,
+    text = "",
     stagger = 30,
     className,
     charClassName,
 }: SolariTextProps) {
-    const upper = text.toUpperCase()
+    const safeText = text || ""
+    const upper = safeText.toUpperCase()
 
     return (
-        <span className={className} aria-label={text}>
+        <span className={className} aria-label={safeText}>
             {upper.split("").map((char, i) => (
                 <SolariChar
                     key={i}

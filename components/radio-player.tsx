@@ -46,7 +46,11 @@ export function RadioPlayer() {
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState(-1)
   const [progress, setProgress] = useState(0)
   const [visibleIndex, setVisibleIndex] = useState(0)
-  const [now, setNow] = useState(getSyncedTime())
+  const [now, setNow] = useState(0)
+
+  useEffect(() => {
+    setNow(getSyncedTime())
+  }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const CARD_WIDTH = 406
