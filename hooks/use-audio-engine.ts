@@ -238,12 +238,13 @@ export function useAudioEngine(artists: Artist[]) {
 
                 const playing = isPlayingRef.current
                 const active = findActiveArtist(artistsRef.current)
-                const preload = findPreloadArtist(artistsRef.current)
                 setActiveArtist(active)
 
+                // ── Release after card ends (10 min grace) ─────────────────────
                 if (!active && currentUrlRef.current) {
                     const prevArtist = artistsRef.current.find(
-                        (a) => a.audioUrl === currentUrlRef.current
+                        (a) => a.audioUrl === currentUrlRef.current ||
+                            resolveStreamUrl(a.audioUrl ?? "") === currentUrlRef.current
                     )
                     if (prevArtist && shouldReleaseArtist(prevArtist)) {
                         if (!audio.paused) await fadeOut()
@@ -254,17 +255,13 @@ export function useAudioEngine(artists: Artist[]) {
                     }
                 }
 
-                if (preload?.audioUrl && preload.audioUrl !== currentUrlRef.current) {
-                    preloadTrack(preload.audioUrl)
-                }
-
+                // ── User paused — fade out without touching state ───────────────
                 if (!playing) {
-                    if (!audio.paused) {
-                        await fadeOut()
-                    }
+                    if (!audio.paused) await fadeOut()
                     return
                 }
 
+                // ── No active artist — fade out if still playing ────────────────
                 if (!active) {
                     if (!audio.paused) {
                         await fadeOut()
@@ -273,13 +270,21 @@ export function useAudioEngine(artists: Artist[]) {
                     return
                 }
 
-                const url = active.audioUrl!
+                const resolvedUrl = resolveStreamUrl(active.audioUrl!)
 
-                if (currentUrlRef.current === url && !audio.paused) {
+                // ── Already playing/loaded the correct track — do nothing ───────
+                // This is the critical check: don't restart a live stream just
+                // because it's momentarily buffering (audio.paused = true).
+                if (currentUrlRef.current === resolvedUrl) {
+                    // If it's paused AND we want it playing, try a gentle resume
+                    if (audio.paused && audio.src === resolvedUrl && audio.readyState > 0) {
+                        try { await audio.play() } catch { /* autoplay blocked */ }
+                    }
                     return
                 }
 
-                if (!audio.paused && currentUrlRef.current !== url) {
+                // ── Different track — fade out old one, start new ───────────────
+                if (!audio.paused && currentUrlRef.current !== resolvedUrl) {
                     await fadeOut()
                 }
 
