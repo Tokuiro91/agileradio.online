@@ -55,7 +55,7 @@ export function Header({
     <header className="fixed top-0 left-0 right-0 z-50 h-14 px-4 md:px-8 flex items-center justify-between bg-[#0a0a0a]/90 backdrop-blur border-b border-[#2a2a2a]">
       {/* LEFT */}
       <div className="flex items-center gap-4">
-        <h1 className={`font-mono font-bold text-xl md:text-2xl tracking-wider text-[#99CCCC]`}>
+        <h1 className={`font-tektur font-bold text-xl md:text-2xl tracking-wider text-[#99CCCC]`}>
           <span className="text-[#99CCCC]">BØDEN STADT</span>
         </h1>
         <div className="hidden md:flex items-center gap-2 text-xs text-[#737373] font-mono">

@@ -35,8 +35,8 @@ export default function OfflinePage() {
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center px-6">
             {/* Logo */}
-            <h1 className="font-mono font-bold text-4xl tracking-widest mb-2">
-                K<span className="text-[#99CCCC]">Ø</span>DE
+            <h1 className="font-tektur font-bold text-4xl tracking-widest mb-2 text-[#99CCCC]">
+                BØDEN STADT
             </h1>
             <p className="font-mono text-[#737373] text-xs uppercase tracking-[0.3em] mb-12">
                 You're offline

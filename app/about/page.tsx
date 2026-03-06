@@ -6,7 +6,7 @@ export default function AboutPage() {
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white p-4 pt-32 pb-20 max-w-2xl mx-auto space-y-12">
             <header className="space-y-4">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-[#99CCCC] font-mono">
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-[#99CCCC] font-tektur">
                     <SolariText text="BØDEN STADT RADIO" />
                 </h1>
                 <p className="text-xl md:text-2xl text-[#a3a3a3] font-mono leading-tight uppercase">

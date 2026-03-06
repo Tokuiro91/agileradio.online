@@ -97,7 +97,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-8 text-center text-xs text-[#737373]">
-                    Don't have an account? <Link href="/register" className="text-[#99CCCC] hover:underline">Join BØDEN STADT</Link>
+                    Don't have an account? <Link href="/register" className="text-[#99CCCC] hover:underline font-tektur">Join BØDEN STADT</Link>
                 </p>
 
                 <p className="mt-4 text-center text-[10px] text-[#2a2a2a] uppercase tracking-widest">

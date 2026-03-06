@@ -51,7 +51,7 @@ export function IosInstallPrompt() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/favicon.png" alt="BØDEN STADT" className="w-10 h-10 rounded-xl" />
                 <div>
-                    <div className="font-mono font-bold text-sm tracking-wider">Install BØDEN STADT</div>
+                    <div className="font-tektur font-bold text-sm tracking-wider">Install BØDEN STADT</div>
                     <div className="font-mono text-[10px] text-[#737373] uppercase tracking-wider">
                         Add to Home Screen
                     </div>

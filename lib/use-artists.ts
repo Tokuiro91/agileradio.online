@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useRef } from "react"
 import { generateArtists } from "@/lib/artists-data"
 import type { Artist } from "@/lib/artists-data"
 
-const STORAGE_KEY = "agile_artists"
+const STORAGE_KEY = "boden_artists"
 
 export function useArtists() {
   const [artists, setArtistsState] = useState<Artist[]>([])

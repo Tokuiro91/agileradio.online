@@ -85,8 +85,8 @@ export function ReactionPicker() {
                                 key={pack.id}
                                 onClick={() => !pack.locked && setActivePack(pack.id)}
                                 className={`flex-shrink-0 px-3 py-2 text-[11px] font-mono uppercase tracking-wider transition-colors flex items-center gap-1 ${activePack === pack.id
-                                        ? "text-[#99CCCC] border-b-2 border-[#99CCCC]"
-                                        : "text-[#737373] hover:text-white"
+                                    ? "text-[#99CCCC] border-b-2 border-[#99CCCC]"
+                                    : "text-[#737373] hover:text-white"
                                     } ${pack.locked ? "opacity-50 cursor-not-allowed" : ""}`}
                                 title={pack.locked ? "BØDEN STADT Plus required" : pack.name}
                             >
@@ -122,7 +122,7 @@ export function ReactionPicker() {
                     {/* Plus upsell */}
                     {packs.some(p => p.locked) && (
                         <div className="border-t border-[#2a2a2a] px-3 py-2 text-[10px] font-mono text-[#737373] text-center">
-                            <span className="text-[#99CCCC]">BØDEN STADT Plus</span> — unlock premium sticker packs
+                            <span className="text-[#99CCCC] font-tektur">BØDEN STADT Plus</span> — unlock premium sticker packs
                         </div>
                     )}
                 </div>

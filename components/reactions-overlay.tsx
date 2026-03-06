@@ -43,7 +43,7 @@ function FloatingReaction({ reaction, onDone }: { reaction: Reaction; onDone: ()
     return (
         <div
             ref={ref}
-            className="absolute bottom-20 pointer-events-none select-none"
+            className="absolute bottom-40 pointer-events-none select-none"
             style={{
                 willChange: "transform, opacity",
                 zIndex: 9998,

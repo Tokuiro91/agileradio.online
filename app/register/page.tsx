@@ -57,7 +57,7 @@ export default function RegisterPage() {
         <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center p-4 pt-20">
             <div className="w-full max-w-md bg-[#111] border border-[#2a2a2a] rounded-sm p-8 shadow-2xl">
                 <h1 className="text-3xl font-bold mb-8 text-[#99CCCC] font-mono tracking-tighter">
-                    {step === 1 ? <SolariText text="JOIN BØDEN STADT" /> : <SolariText text="FAVORITES" />}
+                    {step === 1 ? <div className="font-tektur"><SolariText text="JOIN BØDEN STADT" /></div> : <SolariText text="FAVORITES" />}
                 </h1>
 
                 {step === 1 ? (
