@@ -1,28 +1,35 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 
+// Characters used on the board (uppercase + digits + symbols)
 const CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:-"
 
 function randomChar() {
     return CHARSET[Math.floor(Math.random() * CHARSET.length)]
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Single character cell — GPU-accelerated rotateX split-flap
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface SolariCharProps {
     target: string
-    /** delay before this char starts animating (ms) */
+    /** absolute delay (ms) before this character starts its sequence */
     delay: number
+    /** total duration for this character's flip sequence (ms, 80-260) */
+    duration: number
     className?: string
 }
 
-function SolariChar({ target, delay, className }: SolariCharProps) {
+function SolariChar({ target, delay, duration, className }: SolariCharProps) {
     const [display, setDisplay] = useState(target)
+    const [flipping, setFlipping] = useState(false)
     const targetRef = useRef(target)
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const rafRef = useRef<number | null>(null)
 
     useEffect(() => {
-        // Respect prefers-reduced-motion
+        // Prefers-reduced-motion: skip animation
         if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             setDisplay(target)
             return
@@ -30,63 +37,69 @@ function SolariChar({ target, delay, className }: SolariCharProps) {
 
         targetRef.current = target
 
-        const DURATION = 250 // ms per character cycle
-        const FLIPS = 10     // how many random chars to show before settling
+        // Clear previous timers
+        if (timerRef.current) clearTimeout(timerRef.current)
 
-        let flipCount = 0
-        let startTime: number | null = null
+        timerRef.current = setTimeout(() => {
+            // How many flips to show before landing on the target
+            const FLIPS = Math.floor(duration / 50) // ~50ms per flip frame
+            let count = 0
 
-        const animate = (ts: number) => {
-            if (!startTime) startTime = ts
-            const elapsed = ts - startTime
-
-            if (elapsed < delay) {
-                rafRef.current = requestAnimationFrame(animate)
-                return
+            const flip = () => {
+                if (count < FLIPS) {
+                    setFlipping(true)
+                    setTimeout(() => {
+                        setDisplay(count < FLIPS - 1 ? randomChar() : targetRef.current)
+                        setFlipping(false)
+                    }, 25) // half of 50ms — card "mid-flip"
+                    count++
+                    setTimeout(flip, 50)
+                } else {
+                    setDisplay(targetRef.current)
+                    setFlipping(false)
+                }
             }
 
-            const step = Math.floor((elapsed - delay) / (DURATION / FLIPS))
-
-            if (flipCount < FLIPS) {
-                setDisplay(randomChar())
-                flipCount = step
-                rafRef.current = requestAnimationFrame(animate)
-            } else {
-                setDisplay(targetRef.current)
-            }
-        }
-
-        rafRef.current = requestAnimationFrame(animate)
+            flip()
+        }, delay)
 
         return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current)
             if (timerRef.current) clearTimeout(timerRef.current)
         }
-    }, [target, delay])
+    }, [target, delay, duration])
 
     return (
         <span
             className={className}
-            style={{ display: "inline-block", minWidth: target === " " ? "0.35em" : undefined }}
+            style={{
+                display: "inline-block",
+                minWidth: target === " " ? "0.35em" : undefined,
+                willChange: flipping ? "transform" : "auto",
+                transform: flipping ? "rotateX(-25deg) scaleY(0.85)" : "rotateX(0deg) scaleY(1)",
+                transformOrigin: "50% 60%",
+                transition: flipping
+                    ? "transform 25ms ease-in"
+                    : "transform 25ms ease-out",
+                backfaceVisibility: "hidden",
+            } as React.CSSProperties}
         >
             {display === " " ? "\u00a0" : display}
         </span>
     )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SolariText — orchestrates the per-character stagger
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface SolariTextProps {
-    text: string
-    /** ms stagger between each character's animation start */
+    text?: string
+    /** Base stagger between letters will be randomized: stagger ± 50% */
     stagger?: number
     className?: string
     charClassName?: string
 }
 
-/**
- * Renders text with a split-flap (Solari board / airport departure board) animation.
- * Each character cycles through random uppercase chars before landing on the real one.
- * Triggers automatically whenever `text` changes.
- */
 export function SolariText({
     text = "",
     stagger = 30,
@@ -96,13 +109,31 @@ export function SolariText({
     const safeText = text || ""
     const upper = safeText.toUpperCase()
 
+    // Precompute random timing per character (stable across renders of same text)
+    const timings = useMemo(() => {
+        return Array.from({ length: upper.length }, (_, i) => {
+            // Stagger delay: cumulative + random ±50% of base stagger
+            const jitter = stagger * 0.5 * (Math.random() * 2 - 1) // ±50%
+            const delay = i * stagger + jitter
+            // Per-character flip duration: 80–260ms
+            const duration = 80 + Math.floor(Math.random() * 180)
+            return { delay: Math.max(0, delay), duration }
+        })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [upper, stagger])
+
     return (
-        <span className={className} aria-label={safeText}>
+        <span
+            className={className}
+            aria-label={safeText}
+            style={{ display: "inline-flex", gap: 0 }}
+        >
             {upper.split("").map((char, i) => (
                 <SolariChar
                     key={i}
                     target={char}
-                    delay={i * stagger}
+                    delay={timings[i].delay}
+                    duration={timings[i].duration}
                     className={charClassName}
                 />
             ))}
