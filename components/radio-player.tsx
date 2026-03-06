@@ -146,12 +146,25 @@ export function RadioPlayer() {
     return () => el.removeEventListener("wheel", onWheel)
   }, [ready])
 
-  // Initial scroll to playing (or first) artist
+  // Initial scroll to playing (or nearest upcoming) artist
   useEffect(() => {
     if (!ready) return
     const el = scrollRef.current
     if (!el) return
-    const targetIdx = currentPlayingIndex >= 0 ? currentPlayingIndex : 0
+
+    // Find the live artist index, or the nearest upcoming one
+    const now = getSyncedTime()
+    let targetIdx = sortedArtists.findIndex(a => {
+      const s = new Date(a.startTime).getTime()
+      const e = new Date(a.endTime).getTime()
+      return now >= s && now < e
+    })
+    if (targetIdx < 0) {
+      // No live — find the first upcoming
+      targetIdx = sortedArtists.findIndex(a => new Date(a.startTime).getTime() > now)
+    }
+    if (targetIdx < 0) targetIdx = 0
+
     const targetScroll =
       CARD_WIDTH * (TOTAL_CARDS + targetIdx) - el.clientWidth / 2 + CARD_WIDTH / 2
     el.scrollLeft = targetScroll

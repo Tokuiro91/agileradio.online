@@ -129,6 +129,22 @@ export function MobileRadio() {
     return () => clearInterval(interval)
   }, [])
 
+  // Auto-navigate to live card or nearest upcoming on first load
+  useEffect(() => {
+    if (!ready || !sortedArtists.length) return
+    const now = getSyncedTime()
+    let target = sortedArtists.findIndex(a => {
+      const s = new Date(a.startTime).getTime()
+      const e = new Date(a.endTime).getTime()
+      return now >= s && now < e
+    })
+    if (target < 0) {
+      target = sortedArtists.findIndex(a => new Date(a.startTime).getTime() > now)
+    }
+    if (target >= 0) setViewIndex(target)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, sortedArtists.length])
+
   // Real-time artist tracking
   useEffect(() => {
     if (!ready || !sortedArtists.length) return

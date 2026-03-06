@@ -141,6 +141,38 @@ export function useAudioEngine(artists: Artist[]) {
         const url = artist.audioUrl!
         const external = isExternalUrl(url)
 
+        // Detect live streams (AzuraCast, Icecast, etc.)
+        // These cannot be seeked and should be played as-is via direct src load
+        const isLiveStream = external && (
+            url.includes('/radio/') ||
+            url.includes('/stream') ||
+            url.includes('.mp3') ||
+            url.includes('.aac') ||
+            url.includes('.ogg') ||
+            url.includes('/listen/')
+        )
+
+        updateMediaSession(artist)
+
+        if (isLiveStream) {
+            // For live streams: just set src and play immediately
+            // Don't try to seek or preload
+            if (audio.src !== url) {
+                audio.crossOrigin = 'anonymous'
+                audio.src = url
+            }
+            currentUrlRef.current = url
+            preloadUrlRef.current = url
+            audio.volume = isMutedRef.current ? 0 : volumeRef.current / 100
+            try { await audio.play() } catch (e) {
+                // If crossOrigin fails, retry without it
+                audio.crossOrigin = ''
+                audio.src = url
+                try { await audio.play() } catch { /* autoplay blocked */ }
+            }
+            return
+        }
+
         const alreadyLoaded = preloadUrlRef.current === url || currentUrlRef.current === url
         if (!alreadyLoaded || audio.src !== url) {
             audio.src = url
@@ -148,8 +180,6 @@ export function useAudioEngine(artists: Artist[]) {
         currentUrlRef.current = url
         preloadUrlRef.current = url
         audio.volume = isMutedRef.current ? 0 : volumeRef.current / 100
-
-        updateMediaSession(artist)
 
         if (external) {
             try { await audio.play() } catch { /* autoplay blocked */ }
