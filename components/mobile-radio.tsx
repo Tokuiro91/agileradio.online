@@ -190,6 +190,20 @@ export function MobileRadio() {
     setIsMuted(!isMuted)
   }
 
+  // --- Lottie Loader for mobile --- MUST be before any early return (Rules of Hooks)
+  const currentArtistForLottie = sortedArtists[viewIndex]
+  const [lottieData, setLottieData] = useState<any>(null)
+  useEffect(() => {
+    if (currentArtistForLottie?.type === 'ad' && currentArtistForLottie.isLottie && currentArtistForLottie.image) {
+      fetch(currentArtistForLottie.image)
+        .then(r => r.json())
+        .then(data => setLottieData(data))
+        .catch(err => console.error("Mobile Lottie load error:", err))
+    } else {
+      setLottieData(null)
+    }
+  }, [currentArtistForLottie?.id, currentArtistForLottie?.type, currentArtistForLottie?.isLottie, currentArtistForLottie?.image])
+
   if (!ready || !sortedArtists.length) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
@@ -225,19 +239,6 @@ export function MobileRadio() {
   }
 
   const timeDisplay = getTimeDisplay(artist, status)
-
-  // --- Lottie Loader for mobile ---
-  const [lottieData, setLottieData] = useState<any>(null)
-  useEffect(() => {
-    if (artist?.type === 'ad' && artist.isLottie && artist.image) {
-      fetch(artist.image)
-        .then(r => r.json())
-        .then(data => setLottieData(data))
-        .catch(err => console.error("Mobile Lottie load error:", err))
-    } else {
-      setLottieData(null)
-    }
-  }, [artist?.id, artist?.type, artist?.isLottie, artist?.image])
 
   const isAd = artist?.type === 'ad'
 
