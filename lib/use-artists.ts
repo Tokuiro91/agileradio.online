@@ -33,15 +33,24 @@ export function useArtists() {
     }
   }, [])
 
-  const persistToServer = useCallback(async (next: Artist[]) => {
+  const persistToServer = useCallback(async (next: Artist[]): Promise<{ ok: boolean; error?: string }> => {
     try {
-      await fetch("/api/artists", {
+      const res = await fetch("/api/artists?t=" + Date.now(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache"
+        },
         body: JSON.stringify(next),
       })
+      if (res.ok) {
+        // After successful POST, re-read to confirm
+        return { ok: true }
+      }
+      const data = await res.json().catch(() => ({}))
+      return { ok: false, error: data.error ?? `Ошибка сервера (${res.status})` }
     } catch {
-      // non-critical — data is still in localStorage
+      return { ok: false, error: "Нет соединения с сервером" }
     }
   }, [])
 
@@ -50,10 +59,10 @@ export function useArtists() {
     useCallback(
       (action) => {
         setArtistsState((prev) => {
-          const next =
-            typeof action === "function"
-              ? (action as (prevState: Artist[]) => Artist[])(prev)
-              : action
+          const next = typeof action === "function"
+            ? (action as any)(prev)
+            : action
+
           writeToStorage(next)
           persistToServer(next)
           return next
@@ -67,7 +76,9 @@ export function useArtists() {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetch("/api/artists")
+        const res = await fetch("/api/artists?t=" + Date.now(), {
+          headers: { "Cache-Control": "no-cache" }
+        })
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data) && data.length > 0 && !cancelled) {
@@ -96,7 +107,9 @@ export function useArtists() {
 
     const sync = async () => {
       try {
-        const res = await fetch("/api/artists")
+        const res = await fetch("/api/artists?t=" + Date.now(), {
+          headers: { "Cache-Control": "no-cache" }
+        })
         if (res.ok) {
           const data = await res.json()
           if (Array.isArray(data) && data.length > 0) {

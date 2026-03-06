@@ -2,34 +2,24 @@
 
 /**
  * useAudioEngine — единый движок воспроизведения для расписания радио.
- *
- * Логика:
- *  - isPlaying: мастер-переключатель (кнопка Play)
- *  - Каждую секунду ищем артиста, у которого now ∈ [startTime, endTime] и есть audioUrl
- *  - Если URL внешний (http...) — автоподгрузка за 10 мин до начала:
- *      T-10min → audio.load() (буферизация без воспроизведения)
- *      T=0     → audio.play()
- *      T=end   → audio.pause()
- *      T+10min → audio.src = "" (снятие подгрузки)
- *  - Если загруженный файл — seek к нужной позиции при позднем входе
- *  - При смене артиста — Fade-out (1 сек)
+ * Обновлено для использования серверного времени и Media Session API.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Artist } from "@/lib/artists-data"
+import { getSyncedTime } from "./use-server-time"
 
 const FADE_DURATION_MS = 1000
 const FADE_STEPS = 20
 const PRELOAD_BEFORE_MS = 10 * 60 * 1000  // 10 min before start
-const RELEASE_AFTER_MS = 10 * 60 * 1000  // 10 min after end
+const RELEASE_AFTER_MS = 10 * 60 * 1000   // 10 min after end
 
 function isExternalUrl(url: string) {
     return url.startsWith("http://") || url.startsWith("https://")
 }
 
-/** Artist whose slot is currently active (now ∈ [start, end]) */
 function findActiveArtist(artists: Artist[]): Artist | null {
-    const now = Date.now()
+    const now = getSyncedTime()
     return artists.find((a) => {
         if (!a.audioUrl) return false
         const s = new Date(a.startTime).getTime()
@@ -38,38 +28,51 @@ function findActiveArtist(artists: Artist[]): Artist | null {
     }) ?? null
 }
 
-/** Artist that should be preloaded (T-10min before start, not yet playing) */
 function findPreloadArtist(artists: Artist[]): Artist | null {
-    const now = Date.now()
+    const now = getSyncedTime()
     return artists.find((a) => {
         if (!a.audioUrl || !isExternalUrl(a.audioUrl)) return false
         const s = new Date(a.startTime).getTime()
         const e = new Date(a.endTime).getTime()
-        // Window: [start - 10min, start)
         return now >= s - PRELOAD_BEFORE_MS && now < s && now < e
     }) ?? null
 }
 
-/** Should we release the stream? (more than 10 min after end) */
 function shouldReleaseArtist(artist: Artist | null): boolean {
     if (!artist) return false
-    const now = Date.now()
+    const now = getSyncedTime()
     const e = new Date(artist.endTime).getTime()
     return now >= e + RELEASE_AFTER_MS
 }
 
-/** Elapsed seconds from startTime to now (for seeking into uploaded files) */
 function calcSeekPosition(artist: Artist): number {
-    const now = Date.now()
+    const now = getSyncedTime()
     const s = new Date(artist.startTime).getTime()
     return Math.max(0, (now - s) / 1000)
+}
+
+function updateMediaSession(artist: Artist | null) {
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        if (!artist) {
+            navigator.mediaSession.metadata = null
+            return
+        }
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: artist.show,
+            artist: artist.name,
+            album: "KØDE",
+            artwork: [
+                { src: artist.image, sizes: "512x512", type: "image/jpeg" },
+            ],
+        })
+    }
 }
 
 export function useAudioEngine(artists: Artist[]) {
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const preloadUrlRef = useRef<string>("")
     const currentUrlRef = useRef<string>("")
-    const lastReleasedRef = useRef<string>("")   // url released after set
+    const lastReleasedRef = useRef<string>("")
     const isPlayingRef = useRef(false)
     const volumeRef = useRef(75)
     const isMutedRef = useRef(false)
@@ -87,23 +90,31 @@ export function useAudioEngine(artists: Artist[]) {
     useEffect(() => { volumeRef.current = volume }, [volume])
     useEffect(() => { isMutedRef.current = isMuted }, [isMuted])
 
-    // Init audio element once (client-side only)
+    // Init audio element & media session handlers (client-side only)
     useEffect(() => {
         if (!audioRef.current) {
             audioRef.current = new Audio()
             audioRef.current.preload = "auto"
         }
+        if ("mediaSession" in navigator) {
+            navigator.mediaSession.setActionHandler("play", () => {
+                const active = findActiveArtist(artistsRef.current)
+                if (active) togglePlay()
+            })
+            navigator.mediaSession.setActionHandler("pause", () => {
+                togglePlay()
+            })
+            // Seek/Next/Prev are disabled for live radio
+        }
         return () => { audioRef.current?.pause() }
-    }, [])
+    }, []) // eslint-disable-next-line react-hooks/exhaustive-deps
 
-    // Apply volume/mute
     useEffect(() => {
         const audio = audioRef.current
         if (!audio) return
         audio.volume = isMuted ? 0 : volume / 100
     }, [volume, isMuted])
 
-    // ── Fade-out helper ─────────────────────────────────────────────────────────
     const fadeOut = useCallback((): Promise<void> => {
         return new Promise((resolve) => {
             const audio = audioRef.current
@@ -124,14 +135,12 @@ export function useAudioEngine(artists: Artist[]) {
         })
     }, [])
 
-    // ── Start track (with seek for files, direct play for streams) ──────────────
     const startTrack = useCallback(async (artist: Artist) => {
         const audio = audioRef.current
         if (!audio) return
         const url = artist.audioUrl!
         const external = isExternalUrl(url)
 
-        // If we just preloaded this URL into the element, don't reload
         const alreadyLoaded = preloadUrlRef.current === url || currentUrlRef.current === url
         if (!alreadyLoaded || audio.src !== url) {
             audio.src = url
@@ -140,11 +149,11 @@ export function useAudioEngine(artists: Artist[]) {
         preloadUrlRef.current = url
         audio.volume = isMutedRef.current ? 0 : volumeRef.current / 100
 
+        updateMediaSession(artist)
+
         if (external) {
-            // Stream: play from current position (live)
-            try { await audio.play() } catch { /* autoplay blocked, retry on next tick */ }
+            try { await audio.play() } catch { /* autoplay blocked */ }
         } else {
-            // Uploaded file: seek to correct position
             await new Promise<void>((resolve) => {
                 const onCanPlay = () => { audio.removeEventListener("canplay", onCanPlay); audio.removeEventListener("error", onErr); resolve() }
                 const onErr = () => { audio.removeEventListener("canplay", onCanPlay); audio.removeEventListener("error", onErr); resolve() }
@@ -161,16 +170,14 @@ export function useAudioEngine(artists: Artist[]) {
         }
     }, [])
 
-    // ── Preload a stream without playing ────────────────────────────────────────
     const preloadTrack = useCallback((url: string) => {
         const audio = audioRef.current
         if (!audio || preloadUrlRef.current === url) return
         preloadUrlRef.current = url
         audio.src = url
-        audio.load()  // buffers without playing
+        audio.load()
     }, [])
 
-    // ── Release preloaded stream ─────────────────────────────────────────────────
     const releasePreload = useCallback(() => {
         const audio = audioRef.current
         if (!audio) return
@@ -179,7 +186,6 @@ export function useAudioEngine(artists: Artist[]) {
         preloadUrlRef.current = ""
     }, [])
 
-    // ── Core scheduler — runs every second ─────────────────────────────────────
     useEffect(() => {
         const tick = async () => {
             if (tickRunningRef.current) return
@@ -193,9 +199,7 @@ export function useAudioEngine(artists: Artist[]) {
                 const preload = findPreloadArtist(artistsRef.current)
                 setActiveArtist(active)
 
-                // ── Release expired streams ──────────────────────────────────────
                 if (!active && currentUrlRef.current) {
-                    // Find the most recently played artist (to check if 10 min passed)
                     const prevArtist = artistsRef.current.find(
                         (a) => a.audioUrl === currentUrlRef.current
                     )
@@ -204,27 +208,25 @@ export function useAudioEngine(artists: Artist[]) {
                         if (isExternalUrl(currentUrlRef.current)) releasePreload()
                         currentUrlRef.current = ""
                         lastReleasedRef.current = prevArtist.audioUrl!
+                        updateMediaSession(null)
                     }
                 }
 
-                // ── Handle preloading (external streams only) ────────────────────
                 if (preload?.audioUrl && preload.audioUrl !== currentUrlRef.current) {
                     preloadTrack(preload.audioUrl)
                 }
 
-                // ── Master stop ──────────────────────────────────────────────────
                 if (!playing) {
                     if (!audio.paused) {
                         await fadeOut()
-                        // Don't clear currentUrlRef — we still track the active slot
                     }
                     return
                 }
 
-                // ── No active slot — silence ─────────────────────────────────────
                 if (!active) {
                     if (!audio.paused) {
                         await fadeOut()
+                        updateMediaSession(null)
                     }
                     return
                 }
@@ -232,10 +234,9 @@ export function useAudioEngine(artists: Artist[]) {
                 const url = active.audioUrl!
 
                 if (currentUrlRef.current === url && !audio.paused) {
-                    return // Already playing the right track
+                    return
                 }
 
-                // Track changed → fade out old, then start new
                 if (!audio.paused && currentUrlRef.current !== url) {
                     await fadeOut()
                 }
@@ -251,7 +252,6 @@ export function useAudioEngine(artists: Artist[]) {
         return () => clearInterval(interval)
     }, [fadeOut, startTrack, preloadTrack, releasePreload])
 
-    // ── Toggle play ─────────────────────────────────────────────────────────────
     const togglePlay = useCallback(async () => {
         const newPlaying = !isPlayingRef.current
         setIsPlayingState(newPlaying)
@@ -284,3 +284,4 @@ export function useAudioEngine(artists: Artist[]) {
 
     return { isPlaying, volume, isMuted, activeArtist, togglePlay, setVolume, setIsMuted }
 }
+

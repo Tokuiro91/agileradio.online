@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next"
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { AnalyticsProvider } from "@/components/analytics-provider"
+import { NextAuthProvider } from "@/components/providers/session-provider"
 import "./globals.css"
+
 
 /* Google fonts */
 const spaceGrotesk = Space_Grotesk({
@@ -16,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 /* Metadata */
 export const metadata: Metadata = {
-  title: "Agile Radio Online",
+  title: "KØDE Online",
   description: "Live online radio with curated DJ sets and electronic music",
   icons: {
     icon: [
@@ -49,9 +52,13 @@ export default function RootLayout({
           antialiased
         `}
       >
-        {children}
-        <Analytics />
+        <NextAuthProvider>
+          {children}
+          <Analytics />
+          <AnalyticsProvider />
+        </NextAuthProvider>
       </body>
+
     </html>
   )
 }

@@ -11,6 +11,15 @@ export interface Artist {
   orderInDay: number
   startTime: string
   endTime: string
+  instagramUrl?: string
+  soundcloudUrl?: string
+  bandcampUrl?: string
+  // Advertisement fields
+  type?: 'artist' | 'ad'
+  redirectUrl?: string
+  campaignStart?: string
+  campaignEnd?: string
+  isLottie?: boolean
 }
 
 const artistNames = [
@@ -62,7 +71,7 @@ const durations = [
   "01:45:00", "01:30:00", "02:00:00", "01:40:00", "01:55:00",
 ]
 
-const descriptions = [/* твои описания без изменений */]
+const descriptions: string[] = [/* твои описания без изменений */]
 
 function parseDurationToMs(duration: string) {
   const [h, m, s] = duration.split(":").map(Number)

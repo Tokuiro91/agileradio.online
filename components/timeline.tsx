@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import type { Artist } from "@/lib/artists-data"
+import { getSyncedTime } from "@/hooks/use-server-time"
 
 interface TimelineProps {
   totalArtists: number
@@ -12,7 +13,7 @@ interface TimelineProps {
 }
 
 function getArtistProgress(artist: Artist): number {
-  const now = Date.now()
+  const now = getSyncedTime()
   const s = new Date(artist.startTime).getTime()
   const e = new Date(artist.endTime).getTime()
   if (e <= s || now < s) return 0
@@ -53,7 +54,7 @@ export function Timeline({
         groups.push({
           date: d,
           label: new Date(a.startTime)
-            .toLocaleDateString(undefined, {
+            .toLocaleDateString("en-US", {
               day: "numeric",
               month: "long",
             })
@@ -89,7 +90,7 @@ export function Timeline({
         className="relative w-full h-8 cursor-pointer group"
         onClick={handleClick}
         role="slider"
-        aria-label="Навигация по артистам"
+        aria-label="Artist navigation"
         aria-valuemin={0}
         aria-valuemax={totalArtists - 1}
         aria-valuenow={visibleIndex}
@@ -123,7 +124,7 @@ export function Timeline({
                 {/* Real-time fill for playing slot */}
                 {isPlaying && (
                   <div
-                    className="absolute bottom-0 left-px right-px rounded-t-sm bg-[#dc2626] transition-all duration-1000"
+                    className="absolute bottom-0 left-px right-px rounded-t-sm bg-[#99CCCC] transition-all duration-1000"
                     style={{
                       height: "100%",
                       clipPath: `inset(0 ${(1 - innerProgress) * 100}% 0 0)`,
@@ -148,7 +149,7 @@ export function Timeline({
             >
               <button
                 onClick={() => onSeek(day.startIndex)}
-                className="px-3 text-[10px] font-mono uppercase tracking-widest text-[#737373] hover:text-[#dc2626] transition-colors whitespace-nowrap overflow-hidden text-ellipsis"
+                className="px-3 text-[10px] font-mono uppercase tracking-widest text-[#737373] hover:text-[#99CCCC] transition-colors whitespace-nowrap overflow-hidden text-ellipsis"
               >
                 {day.label}
               </button>

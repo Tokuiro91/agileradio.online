@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import type { Artist } from "@/lib/artists-data"
 import { useArtists } from "@/lib/use-artists"
+import { signOut, useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 
 function formatDuration(ms: number) {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -14,6 +17,7 @@ function formatDuration(ms: number) {
 }
 
 const defaultForm = {
+  type: "artist" as "artist" | "ad",
   name: "",
   location: "",
   show: "",
@@ -22,18 +26,36 @@ const defaultForm = {
   start: "",
   end: "",
   description: "",
+  instagramUrl: "",
+  soundcloudUrl: "",
+  bandcampUrl: "",
+  redirectUrl: "",
+  campaignStart: "",
+  campaignEnd: "",
+  isLottie: false,
 }
 
 export default function AdminPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const MAX_ARTISTS = 500
   const { artists, setArtists, ready } = useArtists()
-  const [editingId, setEditingId] = useState<number | null>(null)
 
-  const [isAuthed, setIsAuthed] = useState(false)
-  const [login, setLogin] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const isSuperAdmin = session?.user?.email === "chyrukoleksii@gmail.com"
+
+  // Protect page
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/admin/login")
+    }
+  }, [status, router])
+
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<"artists" | "admins" | "analytics">("analytics")
   const [formError, setFormError] = useState("")
+
+  // Form state
+  const [form, setForm] = useState({ ...defaultForm })
 
   // Upload states
   const [imageUploading, setImageUploading] = useState(false)
@@ -41,15 +63,42 @@ export default function AdminPage() {
   const imageInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
 
+  // Admins tab state
+  const [adminEmails, setAdminEmails] = useState<string[]>([])
+  const [newAdminEmail, setNewAdminEmail] = useState("")
+  const [adminError, setAdminError] = useState("")
+
   useEffect(() => {
-    if (typeof window === "undefined") return
-    const saved = window.localStorage.getItem("agile_admin_authed")
-    if (saved === "true") setIsAuthed(true)
+    fetch("/api/admins")
+      .then((r) => r.json())
+      .then((d) => d.admins && setAdminEmails(d.admins))
+      .catch(() => { })
   }, [])
 
-  const [form, setForm] = useState({ ...defaultForm })
+  const addAdmin = async () => {
+    if (!newAdminEmail.includes("@")) {
+      setAdminError("Введи корректный email")
+      return
+    }
+    const res = await fetch("/api/admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newAdminEmail }),
+    })
+    const d = await res.json()
+    if (d.admins) { setAdminEmails(d.admins); setNewAdminEmail(""); setAdminError("") }
+  }
 
-  // ── Image upload ─────────────────────────────────────────────────────────
+  const removeAdmin = async (email: string) => {
+    const res = await fetch("/api/admins", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+    const d = await res.json()
+    if (d.admins) setAdminEmails(d.admins)
+  }
+
   const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -67,7 +116,6 @@ export default function AdminPage() {
     }
   }
 
-  // ── Audio upload ─────────────────────────────────────────────────────────
   const handleAudioFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -85,7 +133,6 @@ export default function AdminPage() {
     }
   }
 
-  // ── Edit ─────────────────────────────────────────────────────────────────
   const handleEdit = (artist: Artist) => {
     setEditingId(artist.id)
     setForm({
@@ -94,9 +141,17 @@ export default function AdminPage() {
       show: artist.show,
       image: artist.image,
       audioUrl: artist.audioUrl ?? "",
-      start: artist.startTime.slice(0, 16),
-      end: artist.endTime.slice(0, 16),
+      start: artist.startTime?.slice(0, 19) ?? "",
+      end: artist.endTime?.slice(0, 19) ?? "",
       description: artist.description,
+      instagramUrl: artist.instagramUrl ?? "",
+      soundcloudUrl: artist.soundcloudUrl ?? "",
+      bandcampUrl: artist.bandcampUrl ?? "",
+      type: artist.type ?? "artist",
+      redirectUrl: artist.redirectUrl ?? "",
+      campaignStart: artist.campaignStart?.slice(0, 19) ?? "",
+      campaignEnd: artist.campaignEnd?.slice(0, 19) ?? "",
+      isLottie: !!artist.isLottie,
     })
   }
 
@@ -107,8 +162,7 @@ export default function AdminPage() {
     if (audioInputRef.current) audioInputRef.current.value = ""
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const isEditing = editingId !== null
     if (!isEditing && artists.length >= MAX_ARTISTS) {
@@ -116,6 +170,8 @@ export default function AdminPage() {
       return
     }
     setFormError("")
+
+    // For Ads, we might not have start/end broadcast times in the same way, but let's keep them valid
     const startDate = form.start ? new Date(form.start) : new Date()
     const endDate = form.end
       ? new Date(form.end)
@@ -123,93 +179,68 @@ export default function AdminPage() {
     const durationMs = endDate.getTime() - startDate.getTime()
 
     const newArtist: Artist = {
-      id:
-        editingId ??
-        (artists.length ? Math.max(...artists.map((a) => a.id)) + 1 : 0),
-      name: form.name || "Без имени",
-      location: form.location || "Город",
-      show: form.show || "Новый сет",
+      id: editingId ?? (artists.length ? Math.max(...artists.map((a) => a.id)) + 1 : 0),
+      name: form.name || (form.type === 'ad' ? "Untitled Ad" : "Без имени"),
+      location: form.location || "Earth",
+      show: form.show || (form.type === 'ad' ? "Advertisement" : "Новый сет"),
       image: form.image || "/artists/artist-1.jpg",
       audioUrl: form.audioUrl || undefined,
       duration: formatDuration(durationMs),
-      description: form.description || "Описание будет добавлено позже.",
+      description: form.description || "...",
       dayIndex: 0,
       orderInDay: 0,
       startTime: startDate.toISOString(),
       endTime: endDate.toISOString(),
+      instagramUrl: form.instagramUrl || undefined,
+      soundcloudUrl: form.soundcloudUrl || undefined,
+      bandcampUrl: form.bandcampUrl || undefined,
+      type: form.type,
+      redirectUrl: form.type === 'ad' ? form.redirectUrl : undefined,
+      campaignStart: form.type === 'ad' && form.campaignStart ? new Date(form.campaignStart).toISOString() : undefined,
+      campaignEnd: form.type === 'ad' && form.campaignEnd ? new Date(form.campaignEnd).toISOString() : undefined,
+      isLottie: form.type === 'ad' ? form.isLottie : undefined,
     }
 
-    if (isEditing) {
-      setArtists((prev) => prev.map((a) => (a.id === editingId ? newArtist : a)))
-    } else {
-      setArtists((prev) => [...prev, newArtist])
+    const nextArtists = isEditing
+      ? artists.map((a) => (a.id === editingId ? newArtist : a))
+      : [...artists, newArtist]
+
+    try {
+      const res = await fetch("/api/artists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(nextArtists),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setFormError(data.error ?? `Ошибка сервера (${res.status})`)
+        return
+      }
+    } catch {
+      setFormError("Нет соединения с сервером")
+      return
     }
+
+    setArtists(nextArtists)
     resetForm()
   }
 
   const handleDelete = (id: number) => {
-    setArtists((prev) => prev.filter((a) => a.id !== id))
+    const next = artists.filter((a) => a.id !== id)
+    setArtists(next)
+    // Persist delete
+    fetch("/api/artists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    })
     if (editingId === id) resetForm()
   }
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (login === "Lirano" && password === "Lirano@") {
-      setIsAuthed(true)
-      setError("")
-      if (typeof window !== "undefined")
-        window.localStorage.setItem("agile_admin_authed", "true")
-    } else {
-      setError("Неверный логин или пароль")
-    }
-  }
-
-  // ── Login screen ─────────────────────────────────────────────────────────
-  if (!isAuthed) {
+  if (status === "loading" || !ready) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm p-6">
-          <h1 className="text-lg font-semibold mb-1 tracking-wide">
-            AGILE RADIO <span className="text-[#737373]">/ ADMIN</span>
-          </h1>
-          <p className="text-xs text-[#737373] mb-4">Вход в панель управления</p>
-          <form onSubmit={handleLogin} className="space-y-3 text-sm">
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Логин</label>
-              <input
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                placeholder="Lirano"
-              />
-            </div>
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Пароль</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                placeholder="Lirano@"
-              />
-            </div>
-            {error && <p className="text-xs text-[#f97373]">{error}</p>}
-            <button
-              type="submit"
-              className="w-full mt-2 px-3 py-1.5 text-xs uppercase tracking-widest bg-[#dc2626] text-white rounded-sm hover:bg-[#ef4444] transition"
-            >
-              Войти
-            </button>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center px-4 text-[#9ca3af] text-sm">
-        Загрузка данных артистов...
+      <div className="min-h-screen bg-black flex items-center justify-center text-[#9ca3af] font-mono text-[10px] uppercase tracking-widest">
+        Loading...
       </div>
     )
   }
@@ -221,308 +252,174 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#050505] text-[#e5e5e5]">
       <header className="border-b border-[#2a2a2a] px-6 py-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold tracking-wide">
-          AGILE RADIO <span className="text-[#737373]">/ ADMIN</span>
-        </h1>
-        <p className="text-xs text-[#737373]">
-          Данные сохраняются на сервер (data/artists.json)
-        </p>
+        <div className="flex items-center gap-6">
+          <h1 className="text-lg font-semibold tracking-wide">
+            KØDE <span className="text-[#737373]">/ ADMIN</span>
+          </h1>
+          <div className="flex gap-1">
+            <button onClick={() => setActiveTab("artists")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artists" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Артисты</button>
+            <button onClick={() => setActiveTab("admins")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "admins" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Администраторы</button>
+            <button onClick={() => setActiveTab("analytics")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "analytics" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Аналитика</button>
+          </div>
+        </div>
+        <button onClick={() => signOut({ callbackUrl: "/admin/login" })} className="text-xs text-[#737373] hover:text-white transition px-3 py-1 border border-[#2a2a2a] rounded-sm">Выйти</button>
       </header>
 
-      <main className="px-6 py-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        {/* ── Form ───────────────────────────────────────────────────── */}
-        <section className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold">Карточка артиста</h2>
-            <p className="text-[11px] text-[#6b7280]">
-              Всего: <span className="text-[#e5e5e5]">{artists.length}</span> /{" "}
-              {MAX_ARTISTS}
-            </p>
+      {activeTab === "analytics" && (
+        <div className="p-6">
+          <AnalyticsDashboard />
+        </div>
+      )}
+
+      {activeTab === "admins" && (
+        <div className="px-6 py-6 max-w-lg">
+          <h2 className="text-sm font-semibold mb-4 text-[#99CCCC] font-mono">AD MANAGER LIST</h2>
+          <div className="flex gap-2 mb-4">
+            <input
+              value={newAdminEmail}
+              onChange={(e) => setNewAdminEmail(e.target.value)}
+              placeholder="email@gmail.com"
+              className="flex-1 bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
+            />
+            <button onClick={addAdmin} className="px-3 py-1.5 text-xs bg-[#dc2626] text-white rounded-sm hover:bg-[#ef4444] transition">Добавить</button>
           </div>
-          <form onSubmit={handleSubmit} className="space-y-3 text-sm">
-            {/* Name */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Имя артиста</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                placeholder="Например, NICK WARREN"
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Локация</label>
-              <input
-                value={form.location}
-                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                placeholder="Город, страна"
-              />
-            </div>
-
-            {/* Show */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Название шоу</label>
-              <input
-                value={form.show}
-                onChange={(e) => setForm((f) => ({ ...f, show: e.target.value }))}
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                placeholder="Например, SUNSET SESSION"
-              />
-            </div>
-
-            {/* ── Photo ──────────────────────────────────────────── */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">
-                Фото артиста
-              </label>
-
-              {/* Preview */}
-              {form.image && (
-                <div className="relative w-full h-28 mb-2 rounded-sm overflow-hidden border border-[#2a2a2a]">
-                  <Image
-                    src={form.image}
-                    alt="preview"
-                    fill
-                    className="object-cover"
-                    sizes="400px"
-                    unoptimized
-                  />
-                </div>
-              )}
-
-              {/* Upload button */}
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={imageUploading}
-                className="w-full px-3 py-1.5 text-xs border border-[#2a2a2a] rounded-sm text-[#9ca3af] hover:border-[#dc2626] hover:text-[#e5e5e5] transition disabled:opacity-40 text-left"
-              >
-                {imageUploading
-                  ? "Загрузка..."
-                  : form.image
-                    ? "Заменить фото"
-                    : "📁  Выбрать фото..."}
-              </button>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageFile}
-              />
-
-              {/* URL fallback */}
-              <input
-                value={form.image}
-                onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-                className="mt-1.5 w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626] text-[#6b7280]"
-                placeholder="или вставьте URL вручную"
-              />
-            </div>
-
-            {/* ── Audio ──────────────────────────────────────────── */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">
-                Аудио (воспроизводится в эфире)
-              </label>
-
-              {form.audioUrl && (
-                <audio
-                  src={form.audioUrl}
-                  controls
-                  className="w-full h-8 mb-2 opacity-80"
-                />
-              )}
-
-              {/* File upload */}
-              <button
-                type="button"
-                onClick={() => audioInputRef.current?.click()}
-                disabled={audioUploading}
-                className="w-full px-3 py-1.5 text-xs border border-[#2a2a2a] rounded-sm text-[#9ca3af] hover:border-[#dc2626] hover:text-[#e5e5e5] transition disabled:opacity-40 text-left"
-              >
-                {audioUploading
-                  ? "Загрузка..."
-                  : form.audioUrl && !form.audioUrl.startsWith("http")
-                    ? "Заменить аудио файл"
-                    : "🎵  Выбрать аудио файл..."}
-              </button>
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept="audio/*"
-                className="hidden"
-                onChange={handleAudioFile}
-              />
-
-              {/* URL input — for external streams / links */}
-              <div className="mt-2">
-                <p className="text-[10px] text-[#6b7280] mb-1">или вставьте ссылку на трансляцию / файл:</p>
-                <input
-                  type="url"
-                  value={form.audioUrl?.startsWith("http") ? form.audioUrl : ""}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, audioUrl: e.target.value }))
-                  }
-                  className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626] text-[#9ca3af] font-mono"
-                  placeholder="https://stream.example.com/live.mp3"
-                />
-              </div>
-
-              {form.audioUrl && (
-                <div className="mt-1 flex items-center justify-between">
-                  <p className="text-[10px] text-[#6b7280] font-mono truncate max-w-[85%]">
-                    {form.audioUrl}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, audioUrl: "" }))}
-                    className="text-[10px] text-[#dc2626] hover:text-[#ef4444] ml-2 shrink-0"
-                  >
-                    ✕ очистить
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* ── Times ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block mb-1 text-xs text-[#9ca3af]">
-                  Начало (datetime-local)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.start}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, start: e.target.value }))
-                  }
-                  className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                />
-              </div>
-              <div>
-                <label className="block mb-1 text-xs text-[#9ca3af]">
-                  Конец (datetime-local)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.end}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, end: e.target.value }))
-                  }
-                  className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]"
-                />
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block mb-1 text-xs text-[#9ca3af]">Описание</label>
-              <textarea
-                value={form.description}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-                className="w-full bg-[#050505] border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626] min-h-[80px] resize-vertical"
-                placeholder="Краткая информация об артисте и сете..."
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col gap-2 pt-2">
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  disabled={editingId === null && artists.length >= MAX_ARTISTS}
-                  className="px-3 py-1.5 text-xs uppercase tracking-widest rounded-sm transition disabled:opacity-40 disabled:cursor-not-allowed bg-[#dc2626] text-white hover:bg-[#ef4444]"
-                >
-                  {editingId !== null ? "Сохранить" : "Добавить"}
-                </button>
-                {editingId !== null && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-3 py-1.5 text-xs uppercase tracking-widest border border-[#4b5563] text-[#9ca3af] rounded-sm hover:border-[#9ca3af]"
-                  >
-                    Отмена
-                  </button>
+          {adminError && <p className="text-xs text-red-400 mb-3">{adminError}</p>}
+          <ul className="space-y-2">
+            {adminEmails.map((email) => (
+              <li key={email} className="flex items-center justify-between bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm px-3 py-2">
+                <span className="text-xs font-mono text-[#e5e5e5]">{email}</span>
+                {email.toLowerCase() !== "chyrukoleksii@gmail.com" && (
+                  <button onClick={() => removeAdmin(email)} className="text-[10px] text-[#737373] hover:text-red-400 transition">Удалить</button>
                 )}
-              </div>
-              {formError && (
-                <p className="text-[11px] text-[#f97373]">{formError}</p>
-              )}
-            </div>
-          </form>
-        </section>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-        {/* ── Artist list ───────────────────────────────────────────── */}
-        <section className="bg-[#0a0a0a] border border-[#2a2a2a] rounded-sm p-4">
-          <h2 className="text-sm font-semibold mb-3">
-            Сетка артистов (отсортировано по времени)
-          </h2>
-          <div className="max-h-[70vh] overflow-auto pr-1 space-y-2 text-xs">
-            {sortedArtists.map((artist) => (
-              <div
-                key={artist.id}
-                className={`w-full flex items-center justify-between px-2 py-1.5 rounded-sm border ${editingId === artist.id
-                  ? "border-[#dc2626] bg-[#111827]"
-                  : "border-[#1f2937]"
-                  } hover:border-[#dc2626] text-left`}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleEdit(artist)}
-                  className="flex-1 flex items-center justify-between gap-2 pr-2"
-                >
+      {activeTab === "artists" && (
+        <main className="px-6 py-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">{form.type === 'ad' ? 'ADVERTISEMENT SETUP' : 'ARTIST SETUP'}</h2>
+              <p className="text-[11px] text-[#6b7280]">Slot usage: <span className="text-[#e5e5e5]">{artists.length}</span> / {MAX_ARTISTS}</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4 text-sm bg-[#0a0a0a] p-4 border border-[#1a1a1a] rounded-sm">
+              {isSuperAdmin && (
+                <div>
+                  <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Entry Type</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setForm(f => ({ ...f, type: 'artist' }))} className={`flex-1 py-1.5 text-[10px] font-mono border rounded-sm transition ${form.type === 'artist' ? 'bg-white text-black border-white' : 'border-[#2a2a2a] text-[#737373]'}`}>ARTIST</button>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, type: 'ad' }))} className={`flex-1 py-1.5 text-[10px] font-mono border rounded-sm transition ${form.type === 'ad' ? 'bg-[#99CCCC] text-black border-[#99CCCC]' : 'border-[#2a2a2a] text-[#737373]'}`}>ADVERTISEMENT</button>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">{form.type === 'ad' ? 'Banner Title' : 'Artist Name'}</label>
+                <input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#99CCCC]" />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">{form.type === 'ad' ? 'Slogan' : 'Show Name'}</label>
+                <input value={form.show} onChange={(e) => setForm(f => ({ ...f, show: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#99CCCC]" />
+              </div>
+
+              {form.type === 'ad' && (
+                <>
+                  <div>
+                    <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Redirect URL</label>
+                    <input type="url" value={form.redirectUrl} onChange={(e) => setForm(f => ({ ...f, redirectUrl: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#99CCCC] text-[#99CCCC]" />
+                  </div>
                   <div className="flex items-center gap-2">
-                    {artist.image && (
-                      <div className="relative w-8 h-8 rounded-sm overflow-hidden flex-shrink-0">
-                        <Image
-                          src={artist.image}
-                          alt={artist.name}
-                          fill
-                          className="object-cover"
-                          sizes="32px"
-                          unoptimized
-                        />
-                      </div>
-                    )}
+                    <input type="checkbox" id="lottie" checked={form.isLottie} onChange={(e) => setForm(f => ({ ...f, isLottie: e.target.checked }))} className="accent-[#99CCCC]" />
+                    <label htmlFor="lottie" className="text-[10px] uppercase font-mono text-[#737373]">Lottie JSON Format</label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.15em] text-[#6b7280]">
-                        {artist.location}
-                      </p>
-                      <p className="text-xs text-[#e5e5e5] font-medium">
-                        {artist.name}
-                      </p>
-                      <p className="text-[11px] text-[#9ca3af]">{artist.show}</p>
+                      <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Campaign Start</label>
+                      <input type="datetime-local" value={form.campaignStart} onChange={(e) => setForm(f => ({ ...f, campaignStart: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#99CCCC]" />
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Campaign End</label>
+                      <input type="datetime-local" value={form.campaignEnd} onChange={(e) => setForm(f => ({ ...f, campaignEnd: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#99CCCC]" />
                     </div>
                   </div>
-                  <div className="text-right text-[10px] text-[#9ca3af] font-mono flex-shrink-0">
-                    <p>
-                      {artist.startTime.slice(11, 16)} —{" "}
-                      {artist.endTime.slice(11, 16)} UTC
-                    </p>
-                    <p className="text-[#6b7280]">{artist.duration}</p>
-                    {artist.audioUrl && (
-                      <p className="text-[#dc2626]">🎵 аудио</p>
-                    )}
+                </>
+              )}
+
+              {form.type !== 'ad' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Start Broadcast</label>
+                    <input type="datetime-local" step="1" value={form.start} onChange={(e) => setForm(f => ({ ...f, start: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]" />
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(artist.id)}
-                  className="ml-2 px-2 py-1 text-[10px] uppercase tracking-[0.15em] text-[#f97373] border border-[#4b5563] rounded-sm hover:border-[#f97373]"
-                >
-                  удалить
-                </button>
+                  <div>
+                    <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">End Broadcast</label>
+                    <input type="datetime-local" step="1" value={form.end} onChange={(e) => setForm(f => ({ ...f, end: e.target.value }))} className="w-full bg-black border border-[#2a2a2a] rounded-sm px-2 py-1.5 text-xs outline-none focus:border-[#dc2626]" />
+                  </div>
+                </div>
+              )}
+
+              {/* Shared Photo section */}
+              <div>
+                <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Visual Resource (Image/JSON URL)</label>
+                {form.image && !form.isLottie && (
+                  <div className="relative w-full h-24 mb-2 border border-[#1a1a1a] rounded-sm overflow-hidden">
+                    <Image src={form.image} alt="preview" fill className="object-cover" unoptimized />
+                  </div>
+                )}
+                <button type="button" onClick={() => imageInputRef.current?.click()} className="w-full py-1.5 border border-[#1a1a1a] rounded-sm text-[10px] font-mono text-[#737373] hover:text-white transition">UPLOAD FILE</button>
+                <input ref={imageInputRef} type="file" className="hidden" onChange={handleImageFile} />
+                <input value={form.image} onChange={(e) => setForm(f => ({ ...f, image: e.target.value }))} className="mt-2 w-full bg-black border border-[#1a1a1a] rounded-sm px-2 py-1 text-[10px] font-mono text-[#737373]" placeholder="Paste URL manually..." />
               </div>
-            ))}
+
+              {/* Shared Audio/Desc (Hide audio for ads usually? or keep available) */}
+              <div>
+                <label className="block mb-1 text-[10px] uppercase font-mono text-[#737373]">Broadcast Audio URL</label>
+                <input value={form.audioUrl} onChange={(e) => setForm(f => ({ ...f, audioUrl: e.target.value }))} className="w-full bg-black border border-[#1a1a1a] rounded-sm px-2 py-1 text-[10px] font-mono text-white" />
+              </div>
+
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 py-2 bg-[#dc2626] text-white text-[10px] font-mono uppercase tracking-widest hover:bg-[#ef4444] transition">{editingId ? 'Save Entry' : 'Create Entry'}</button>
+                {editingId && <button type="button" onClick={resetForm} className="px-4 py-2 border border-[#2a2a2a] text-[10px] font-mono uppercase text-[#737373]">Cancel</button>}
+              </div>
+              {formError && <p className="text-[10px] text-red-400 font-mono mt-2">{formError}</p>}
+            </form>
           </div>
-        </section>
-      </main>
+
+          <section className="flex-1 overflow-hidden">
+            <h2 className="text-sm font-semibold mb-3 font-mono text-[#737373]">LIVE GRID / SCHEDULE </h2>
+            <div className="max-h-[85vh] overflow-y-auto space-y-2 pr-2">
+              {sortedArtists.map((artist) => (
+                <div key={artist.id} className={`p-4 border group transition-colors flex items-center justify-between ${editingId === artist.id ? 'border-[#dc2626] bg-[#111]' : 'border-[#1a1a1a] bg-[#080808] hover:border-[#333]'}`}>
+                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleEdit(artist)}>
+                    <div className="relative w-12 h-12 bg-[#1a1a1a] rounded-sm overflow-hidden flex-shrink-0">
+                      {artist.image && <Image src={artist.image} alt="" fill className={`object-cover ${artist.type === 'ad' ? 'opacity-90' : ''}`} sizes="48px" unoptimized />}
+                      {artist.type === 'ad' && <div className="absolute top-0 right-0 bg-[#99CCCC] text-black text-[7px] font-bold px-1 py-0.5">AD</div>}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">{artist.name}</p>
+                      <p className="text-[10px] text-[#737373] uppercase">{artist.show}</p>
+                      <div className="mt-1 flex gap-2 text-[9px] font-mono">
+                        {artist.type === 'ad' ? (
+                          <span className="text-[#99CCCC]">CAMPAIGN: {artist.campaignEnd?.slice(5, 10) || 'UNTIL STOP'}</span>
+                        ) : (
+                          <span className="text-[#737373]">{artist.startTime.slice(11, 16)} - {artist.endTime.slice(11, 16)} UTC</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(artist.id); }} className="p-2 text-[#444] hover:text-red-500 transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+      )}
     </div>
   )
 }

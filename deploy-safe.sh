@@ -44,8 +44,9 @@ sshpass -p "$VPS_PASS" ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_IP" << 'E
   cp -f data/artists.json /tmp/artists_backup.json 2>/dev/null && echo "   ✅ artists.json → /tmp/artists_backup.json" || echo "   ⚠️  artists.json не найден, пропускаем"
   cp -rf public/uploads/ /tmp/uploads_backup/ 2>/dev/null && echo "   ✅ uploads/ → /tmp/uploads_backup/" || echo "   ⚠️  uploads/ не найден, пропускаем"
 
-  # Обновляем код
+  # Обновляем код (сбрасываем artists.json чтобы не было конфликта — у нас есть бэкап)
   echo "   → git pull..."
+  git checkout -- data/artists.json 2>/dev/null || true
   git pull origin main
 
   echo "   → npm install..."

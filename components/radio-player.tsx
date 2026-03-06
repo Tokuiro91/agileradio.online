@@ -6,10 +6,11 @@ import { ArtistCard } from "@/components/artist-card"
 import { Timeline } from "@/components/timeline"
 import { useArtists } from "@/lib/use-artists"
 import { useAudioEngine } from "@/hooks/use-audio-engine"
+import { useServerTimeSync, setGlobalTimeOffset, getSyncedTime } from "@/hooks/use-server-time"
 
 /** Returns index of currently-playing artist (by real clock), or -1 */
 function findCurrentArtistIndex(artists: { startTime: string; endTime: string }[]): number {
-  const now = Date.now()
+  const now = getSyncedTime()
   return artists.findIndex((a) => {
     const s = new Date(a.startTime).getTime()
     const e = new Date(a.endTime).getTime()
@@ -19,7 +20,7 @@ function findCurrentArtistIndex(artists: { startTime: string; endTime: string }[
 
 /** Progress [0..1] for a given artist based on real time */
 function calcProgress(artist: { startTime: string; endTime: string }): number {
-  const now = Date.now()
+  const now = getSyncedTime()
   const s = new Date(artist.startTime).getTime()
   const e = new Date(artist.endTime).getTime()
   if (now < s || e <= s) return 0
@@ -35,12 +36,20 @@ function localDate(iso: string): string {
 
 export function RadioPlayer() {
   const { artists, ready } = useArtists()
+  const { offset } = useServerTimeSync()
+
+  // Apply server time offset globally as soon as it arrives (non-blocking)
+  useEffect(() => {
+    setGlobalTimeOffset(offset)
+  }, [offset])
+
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState(-1)
   const [progress, setProgress] = useState(0)
   const [visibleIndex, setVisibleIndex] = useState(0)
+  const [now, setNow] = useState(getSyncedTime())
   const scrollRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
-  const CARD_WIDTH = 316
+  const CARD_WIDTH = 406
 
   // ── Sort artists by startTime ──────────────────────────────────────────────
   const sortedArtists = useMemo(
@@ -63,6 +72,7 @@ export function RadioPlayer() {
   useEffect(() => {
     if (!ready || !sortedArtists.length) return
     const tick = () => {
+      setNow(getSyncedTime())
       const idx = findCurrentArtistIndex(sortedArtists)
       setCurrentPlayingIndex(idx)
       setProgress(idx >= 0 ? calcProgress(sortedArtists[idx]) : 0)
@@ -176,15 +186,32 @@ export function RadioPlayer() {
       }
       const artist = sortedArtists[realIndex]
       if (!artist) return "upcoming"
-      const now = Date.now()
       const end = new Date(artist.endTime).getTime()
       const start = new Date(artist.startTime).getTime()
       if (now > end) return "played"
       if (now >= start) return "playing"
       return "upcoming"
     },
-    [currentPlayingIndex, TOTAL_CARDS, sortedArtists]
+    [currentPlayingIndex, TOTAL_CARDS, sortedArtists, now]
   )
+
+  // Countdown logic
+  const nextArtist = useMemo(() => {
+    if (currentPlayingIndex >= 0) return null
+    return sortedArtists.find((a) => new Date(a.startTime).getTime() > now) || null
+  }, [currentPlayingIndex, sortedArtists, now])
+
+  let countdownStr = ""
+  if (nextArtist) {
+    const diff = new Date(nextArtist.startTime).getTime() - now
+    if (diff > 0) {
+      const totalSec = Math.floor(diff / 1000)
+      const h = String(Math.floor(totalSec / 3600)).padStart(2, "0")
+      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0")
+      const s = String(totalSec % 60).padStart(2, "0")
+      countdownStr = `${h !== "00" ? h + ":" : ""}${m}:${s}`
+    }
+  }
 
   // 3× copies for infinite scroll
   const tripleArtists = useMemo(() => {
@@ -208,8 +235,8 @@ export function RadioPlayer() {
 
       {/* Background ambience */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#dc2626]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#dc2626]/5 rounded-full blur-[100px]" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#99CCCC]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#99CCCC]/5 rounded-full blur-[100px]" />
       </div>
 
       {/* Horizontal scroll area */}
@@ -218,7 +245,7 @@ export function RadioPlayer() {
         className="absolute inset-0 pt-16 pb-16 flex items-center overflow-x-auto overflow-y-hidden scrollbar-hide"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        <div className="flex items-center gap-4 px-8" style={{ minWidth: "max-content" }}>
+        <div className="flex items-center gap-6 px-8" style={{ minWidth: "max-content" }}>
           {tripleArtists.map((artist, i) => {
             const realIndex = i % TOTAL_CARDS
 
@@ -245,9 +272,9 @@ export function RadioPlayer() {
               >
                 {isFirstOfDay && (
                   <div className="flex items-center gap-2 mb-3 pl-1">
-                    <div className="w-2 h-2 rotate-45 bg-[#dc2626]" />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#dc2626]">
-                      {new Date(artist.startTime).toLocaleDateString(undefined, {
+                    <div className="w-2 h-2 rotate-45 bg-[#99CCCC]" />
+                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-[#99CCCC]">
+                      {new Date(artist.startTime).toLocaleDateString("en-US", {
                         day: "numeric",
                         month: "long",
                       }).toUpperCase()}
@@ -266,6 +293,17 @@ export function RadioPlayer() {
           })}
         </div>
       </div>
+
+      {/* Countdown UI */}
+      {countdownStr && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40">
+          <div className="backdrop-blur-xl bg-black/60 border border-[#2a2a2a] px-6 py-3 rounded-full flex gap-3 items-center shadow-2xl">
+            <span className="w-2 h-2 rounded-full bg-[#99CCCC] animate-pulse" />
+            <span className="text-xs text-[#a3a3a3] uppercase tracking-widest">BROADCAST STARTS IN</span>
+            <span className="text-sm font-mono text-white tracking-[0.2em]">{countdownStr}</span>
+          </div>
+        </div>
+      )}
 
       <Timeline
         totalArtists={TOTAL_CARDS}

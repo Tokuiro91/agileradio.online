@@ -1,8 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Play, Pause, Volume2, VolumeX, Clock } from "lucide-react"
-import { zeroPrime } from "@/app/fonts"
+import { Play, Pause, Volume2, VolumeX, Clock, Menu } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import Link from "next/link"
+
 
 interface HeaderProps {
   volume?: number
@@ -47,8 +55,8 @@ export function Header({
     <header className="fixed top-0 left-0 right-0 z-50 h-14 px-4 md:px-8 flex items-center justify-between bg-[#0a0a0a]/90 backdrop-blur border-b border-[#2a2a2a]">
       {/* LEFT */}
       <div className="flex items-center gap-4">
-        <h1 className={`${zeroPrime.className} text-xl md:text-2xl tracking-wider text-[#e5e5e5]`}>
-          A<span className="text-red-600">G</span>ILE
+        <h1 className={`font-mono font-bold text-xl md:text-2xl tracking-wider text-[#99CCCC]`}>
+          K<span className="text-[#99CCCC]">Ø</span>DE
         </h1>
         <div className="hidden md:flex items-center gap-2 text-xs text-[#737373] font-mono">
           <Clock className="w-3 h-3" />
@@ -62,7 +70,7 @@ export function Header({
         <button
           onClick={onTogglePlay}
           title={isPlaying ? "Пауза" : "Воспроизведение"}
-          className="w-9 h-9 flex items-center justify-center bg-[#dc2626] text-white rounded-sm hover:bg-[#ef4444] transition"
+          className="w-9 h-9 flex items-center justify-center bg-[#99CCCC] text-white rounded-sm hover:bg-[#88bbbb] transition"
         >
           {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
         </button>
@@ -95,7 +103,7 @@ export function Header({
                     onVolumeChange?.(Number(e.target.value))
                     if (Number(e.target.value) > 0 && isMuted) onMuteToggle?.()
                   }}
-                  className="flex-1 h-1 bg-[#2a2a2a] rounded-full accent-[#dc2626]"
+                  className="flex-1 h-1 bg-[#2a2a2a] rounded-full accent-[#99CCCC]"
                 />
                 <span className="w-8 text-right text-xs font-mono text-[#737373]">
                   {isMuted ? 0 : volume}
@@ -104,6 +112,35 @@ export function Header({
             </div>
           )}
         </div>
+
+        {/* BURGER MENU */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="w-9 h-9 flex items-center justify-center bg-[#1f1f1f] text-white rounded-sm hover:bg-[#2a2a2a] transition">
+              <Menu className="w-5 h-5" />
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="bg-[#0a0a0a] border-l border-[#2a2a2a] text-white">
+            <SheetHeader>
+              <SheetTitle className="text-[#99CCCC] font-mono font-bold text-2xl tracking-wider">
+                K<span className="text-white">Ø</span>DE
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col gap-6 mt-12">
+              <Link href="/login" className="text-xl font-mono hover:text-[#99CCCC] transition-colors border-b border-[#2a2a2a] pb-2">
+                LOGIN / JOIN
+              </Link>
+              <Link href="/about" className="text-xl font-mono hover:text-[#99CCCC] transition-colors border-b border-[#2a2a2a] pb-2">
+                ABOUT US
+              </Link>
+              <div className="mt-auto pt-12">
+                <p className="text-[#737373] text-[10px] uppercase tracking-widest font-mono">
+                  Crafting independent radio culture since 2024
+                </p>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   )
