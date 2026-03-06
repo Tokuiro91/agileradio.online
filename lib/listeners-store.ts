@@ -68,3 +68,23 @@ export async function createListener(data: {
 export function findListenerByEmail(email: string): Listener | undefined {
     return getListeners().find((l) => l.email === email.toLowerCase())
 }
+
+export function toggleFavoriteArtist(email: string, artistId: number): number[] {
+    const listeners = getListeners()
+    const index = listeners.findIndex(l => l.email === email.toLowerCase())
+    if (index === -1) throw new Error("User not found")
+
+    const listener = listeners[index]
+    const currentFavorites = listener.favoriteArtists || []
+
+    let newFavorites: number[]
+    if (currentFavorites.includes(artistId)) {
+        newFavorites = currentFavorites.filter(id => id !== artistId)
+    } else {
+        newFavorites = [...currentFavorites, artistId]
+    }
+
+    listeners[index] = { ...listener, favoriteArtists: newFavorites }
+    saveListeners(listeners)
+    return newFavorites
+}

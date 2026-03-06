@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Menu,
   ExternalLink,
+  Star,
 } from "lucide-react"
 
 import type { Artist } from "@/lib/artists-data"
@@ -85,6 +86,42 @@ export function MobileRadio() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchDelta, setTouchDelta] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
+  const [userFavorites, setUserFavorites] = useState<number[]>([])
+
+  // Load user favorites
+  useEffect(() => {
+    fetch("/api/listeners/favorites")
+      .then(r => r.json())
+      .then(data => {
+        if (data.favoriteArtists) {
+          setUserFavorites(data.favoriteArtists)
+        }
+      })
+      .catch() // Ignore if not logged in
+  }, [])
+
+  const toggleFavorite = async (artistId: number) => {
+    // Optimistic UI update
+    const isFav = userFavorites.includes(artistId)
+    setUserFavorites(prev =>
+      isFav ? prev.filter(id => id !== artistId) : [...prev, artistId]
+    )
+
+    // TODO: Register for push notifications here in the future
+
+    try {
+      await fetch("/api/listeners/favorites", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId }),
+      })
+    } catch {
+      // Revert on error
+      setUserFavorites(prev =>
+        isFav ? [...prev, artistId] : prev.filter(id => id !== artistId)
+      )
+    }
+  }
 
   // Hydration-safe filtered artists
   const [filteredArtists, setFilteredArtists] = useState<Artist[]>([])
@@ -476,12 +513,26 @@ export function MobileRadio() {
                   {artist.show}
                 </p>
 
-                {/* Social links — Hide for ads */}
-                {!isAd && (artist.instagramUrl || artist.soundcloudUrl || artist.bandcampUrl) && (
+                {/* Social links & Favorites — Hide for ads */}
+                {!isAd && (
                   <div
                     className="flex items-center gap-4 mt-3"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleFavorite(artist.id)
+                      }}
+                      className={`transition-colors ${userFavorites.includes(artist.id)
+                        ? "text-yellow-500 hover:text-yellow-400"
+                        : "text-[#737373] hover:text-[#99CCCC]"
+                        }`}
+                      aria-label={userFavorites.includes(artist.id) ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star className={`w-5 h-5 ${userFavorites.includes(artist.id) ? "fill-current" : ""}`} />
+                    </button>
+
                     {artist.instagramUrl && (
                       <a
                         href={artist.instagramUrl}

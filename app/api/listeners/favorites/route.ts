@@ -1,0 +1,40 @@
+import { NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { toggleFavoriteArtist, getListeners } from "@/lib/listeners-store"
+
+export async function GET(req: Request) {
+    try {
+        const session = await auth()
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const listeners = getListeners()
+        const listener = listeners.find(l => l.email === session.user?.email)
+
+        if (!listener) return NextResponse.json({ favoriteArtists: [] })
+
+        return NextResponse.json({ favoriteArtists: listener.favoriteArtists || [] })
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+    }
+}
+
+export async function PUT(req: Request) {
+    try {
+        const session = await auth()
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const { artistId } = await req.json()
+        if (typeof artistId !== "number") {
+            return NextResponse.json({ error: "Invalid artist ID" }, { status: 400 })
+        }
+
+        const newFavorites = toggleFavoriteArtist(session.user.email, artistId)
+        return NextResponse.json({ favoriteArtists: newFavorites })
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 })
+    }
+}
