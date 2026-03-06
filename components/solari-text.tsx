@@ -30,8 +30,8 @@ function SolariChar({ target, delay, className }: SolariCharProps) {
 
         targetRef.current = target
 
-        const DURATION = 100 // ms per character cycle
-        const FLIPS = 6      // how many random chars to show before settling
+        const DURATION = 250 // ms per character cycle
+        const FLIPS = 10     // how many random chars to show before settling
 
         let flipCount = 0
         let startTime: number | null = null
