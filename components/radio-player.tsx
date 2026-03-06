@@ -35,10 +35,10 @@ function localDate(iso: string): string {
 }
 
 export function RadioPlayer() {
+  // ── ALL HOOKS MUST BE CALLED UNCONDITIONALLY BEFORE ANY EARLY RETURN ────────
   const { artists, ready } = useArtists()
   const { offset } = useServerTimeSync()
 
-  // Apply server time offset globally as soon as it arrives (non-blocking)
   useEffect(() => {
     setGlobalTimeOffset(offset)
   }, [offset])
@@ -48,42 +48,20 @@ export function RadioPlayer() {
   const [visibleIndex, setVisibleIndex] = useState(0)
   const [now, setNow] = useState(0)
 
-  useEffect(() => {
-    setNow(getSyncedTime())
-  }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
   const CARD_WIDTH = 406
 
-  // ── Sort artists by startTime ──────────────────────────────────────────────
   const sortedArtists = useMemo(
     () => [...artists].sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
     [artists]
   )
   const TOTAL_CARDS = sortedArtists.length
 
-  // ── Audio engine — shared play/pause, volume, scheduled audio ─────────────
-  const {
-    isPlaying,
-    volume,
-    isMuted,
-    togglePlay,
-    setVolume,
-    setIsMuted,
-  } = useAudioEngine(sortedArtists)
+  const audioEngine = useAudioEngine(sortedArtists)
+  const { isPlaying, volume, isMuted, togglePlay, setVolume, setIsMuted } = audioEngine
 
-  // Move guard here to prevent logic below it from crashing
-  if (!ready || !sortedArtists.length) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <div className="text-[#737373] font-mono text-[10px] uppercase tracking-widest animate-pulse">
-          Establishing uplink...
-        </div>
-      </div>
-    )
-  }
-
-  // ── Real-time tracking: currentPlayingIndex + progress every second ────────
+  // Real-time tracking: currentPlayingIndex + progress every second
   useEffect(() => {
     if (!ready || !sortedArtists.length) return
     const tick = () => {
@@ -97,7 +75,7 @@ export function RadioPlayer() {
     return () => clearInterval(interval)
   }, [sortedArtists, ready])
 
-  // ── Infinite scroll ────────────────────────────────────────────────────────
+  // Infinite scroll
   useEffect(() => {
     if (!ready) return
     const el = scrollRef.current
@@ -117,7 +95,7 @@ export function RadioPlayer() {
     return () => el.removeEventListener("scroll", handleScroll)
   }, [TOTAL_CARDS, ready])
 
-  // ── Drag scroll (LMB hold + drag) ─────────────────────────────────────────
+  // Drag scroll (LMB hold + drag)
   useEffect(() => {
     if (!ready) return
     const el = scrollRef.current
@@ -154,13 +132,13 @@ export function RadioPlayer() {
     }
   }, [ready])
 
-  // ── Wheel scroll (vertical → horizontal) ──────────────────────────────────
+  // Wheel scroll (vertical → horizontal)
   useEffect(() => {
     if (!ready) return
     const el = scrollRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return // already horizontal
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
       e.preventDefault()
       el.scrollLeft += e.deltaY
     }
@@ -216,6 +194,22 @@ export function RadioPlayer() {
     return sortedArtists.find((a) => new Date(a.startTime).getTime() > now) || null
   }, [currentPlayingIndex, sortedArtists, now])
 
+  const tripleArtists = useMemo(() => {
+    if (!sortedArtists.length) return []
+    return [...sortedArtists, ...sortedArtists, ...sortedArtists]
+  }, [sortedArtists])
+
+  // ── GUARD: Only after ALL hooks ─────────────────────────────────────────────
+  if (!ready || !sortedArtists.length) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="text-[#737373] font-mono text-[10px] uppercase tracking-widest animate-pulse">
+          Establishing uplink...
+        </div>
+      </div>
+    )
+  }
+
   let countdownStr = ""
   if (nextArtist) {
     const diff = new Date(nextArtist.startTime).getTime() - now
@@ -228,17 +222,8 @@ export function RadioPlayer() {
     }
   }
 
-  // 3× copies for infinite scroll
-  const tripleArtists = useMemo(() => {
-    if (!sortedArtists.length) return []
-    return [...sortedArtists, ...sortedArtists, ...sortedArtists]
-  }, [sortedArtists])
-
-  if (!ready || !sortedArtists.length) return null
-
   return (
     <div className="relative w-full h-screen overflow-hidden bg-[#0a0a0a]">
-      {/* Header receives audio engine controls */}
       <Header
         volume={volume}
         isMuted={isMuted}
@@ -264,8 +249,6 @@ export function RadioPlayer() {
           {tripleArtists.map((artist, i) => {
             const realIndex = i % TOTAL_CARDS
 
-            // Date separator (local timezone):
-            // Show when local calendar date changes vs the previous card.
             const prevDate =
               i === 0
                 ? null
@@ -273,7 +256,6 @@ export function RadioPlayer() {
             const thisDate = localDate(sortedArtists[realIndex].startTime)
             const isFirstOfDay = prevDate !== thisDate
 
-            // Sawtooth wave
             const sawtoothPeriod = 6
             const t = (realIndex % sawtoothPeriod) / sawtoothPeriod
             const waveOffset = (1 - t) * 150 - 75
