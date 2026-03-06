@@ -183,7 +183,18 @@ export function MobileRadio() {
   }
 
   if (!ready || !sortedArtists.length) {
-    return null
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col items-center gap-4">
+          <h1 className="font-mono font-bold text-2xl tracking-wider text-[#99CCCC] animate-pulse">
+            K<span className="text-[#99CCCC]">Ø</span>DE
+          </h1>
+          <div className="text-[#737373] font-mono text-[10px] uppercase tracking-[0.2em]">
+            Syncing Schedule...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const artist = sortedArtists[viewIndex]
@@ -191,7 +202,8 @@ export function MobileRadio() {
   const prevArtist = sortedArtists[((viewIndex - 1) % TOTAL + TOTAL) % TOTAL]
   const nextArtist = sortedArtists[(viewIndex + 1) % TOTAL]
 
-  const getTimeDisplay = (a: Artist, s: "played" | "playing" | "upcoming") => {
+  const getTimeDisplay = (a: Artist | undefined, s: "played" | "playing" | "upcoming") => {
+    if (!a) return "00:00:00"
     if (s === "playing") {
       const parts = a.duration.split(":").map(Number)
       const totalSec = parts[0] * 3600 + parts[1] * 60 + parts[2]

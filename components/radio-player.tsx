@@ -69,7 +69,15 @@ export function RadioPlayer() {
   } = useAudioEngine(sortedArtists)
 
   // Move guard here to prevent logic below it from crashing
-  if (!ready || !sortedArtists.length) return null
+  if (!ready || !sortedArtists.length) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="text-[#737373] font-mono text-[10px] uppercase tracking-widest animate-pulse">
+          Establishing uplink...
+        </div>
+      </div>
+    )
+  }
 
   // ── Real-time tracking: currentPlayingIndex + progress every second ────────
   useEffect(() => {
@@ -316,10 +324,6 @@ export function RadioPlayer() {
         artists={sortedArtists}
       />
 
-      <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </div>
   )
 }
