@@ -178,7 +178,8 @@ app.get('/internal/next', (req, res) => {
             db.get('SELECT filename FROM tracks WHERE id = ?', [schedule.item_id], (err, track) => {
                 if (track) {
                     const fullPath = path.join(MUSIC_DIR, track.filename);
-                    return res.send(`annotate:liq_start_next=${offsetSeconds}:${fullPath}`);
+                    // Use multi-tag approach for Liquidsoap 2.2.x seeking
+                    return res.send(`annotate:liq_cue_in=${offsetSeconds},liq_start=${offsetSeconds}:${fullPath}`);
                 }
                 res.status(404).send('TRACK_NOT_FOUND');
             });
@@ -191,8 +192,8 @@ app.get('/internal/next', (req, res) => {
             `, [schedule.item_id], (err, track) => {
                 if (track) {
                     const fullPath = path.join(MUSIC_DIR, track.filename);
-                    // For playlists, assume first track for now, but apply offset if it's the only track or intended "Set"
-                    return res.send(`annotate:liq_start_next=${offsetSeconds}:${fullPath}`);
+                    // Also apply multi-tag seeking for playlists (sets)
+                    return res.send(`annotate:liq_cue_in=${offsetSeconds},liq_start=${offsetSeconds}:${fullPath}`);
                 }
                 res.status(404).send('PLAYLIST_EMPTY');
             });
