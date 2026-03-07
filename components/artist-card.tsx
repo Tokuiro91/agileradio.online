@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { Clock, ExternalLink, Star } from "lucide-react"
 import type { Artist } from "@/lib/artists-data"
-import { SolariText } from "@/components/solari-text"
 import Lottie from "lottie-react"
 import {
   Tooltip,
@@ -277,10 +276,10 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0, isF
               </p>
             )}
             <h3 className={`${isAd ? 'text-2xl' : 'text-xl'} font-bold text-[#99CCCC] leading-tight mb-0.5`}>
-              <SolariText text={artist.name} stagger={30} />
+              {artist.name}
             </h3>
             <p className={`${isAd ? 'text-sm text-[#99CCCC]' : 'text-xs text-[#a3a3a3]'} tracking-wide`}>
-              <SolariText text={artist.show} stagger={20} />
+              {artist.show}
             </p>
 
             {/* Social links & Favorites */}

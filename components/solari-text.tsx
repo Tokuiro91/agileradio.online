@@ -113,12 +113,12 @@ export function SolariText({
     const timings = useMemo(() => {
         let accumulatedDelay = 0
         return Array.from({ length: upper.length }, (_, i) => {
-            // Stagger delay: 20-40ms between letters
-            const currentStagger = 20 + Math.random() * 20
+            // Stagger delay: 40-60ms between letters
+            const currentStagger = 40 + Math.random() * 20
             accumulatedDelay += currentStagger
 
-            // Per-character flip duration: 80–120ms
-            const duration = 80 + Math.floor(Math.random() * 40)
+            // Per-character flip duration: 100–140ms
+            const duration = 100 + Math.floor(Math.random() * 40)
             return { delay: Math.max(0, accumulatedDelay), duration }
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
