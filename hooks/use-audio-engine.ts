@@ -30,10 +30,14 @@ function resolveStreamUrl(url: string): string {
     return url
 }
 
+function getAudioUrl(artist: Artist): string {
+    return artist.audioUrl || "http://163.245.219.4:9090/stream"
+}
+
 function findActiveArtist(artists: Artist[]): Artist | null {
     const now = getSyncedTime()
     return artists.find((a) => {
-        if (!a.audioUrl) return false
+        if (!getAudioUrl(a)) return false
         const s = new Date(a.startTime).getTime()
         const e = new Date(a.endTime).getTime()
         return now >= s && now < e
@@ -43,7 +47,7 @@ function findActiveArtist(artists: Artist[]): Artist | null {
 function findPreloadArtist(artists: Artist[]): Artist | null {
     const now = getSyncedTime()
     return artists.find((a) => {
-        if (!a.audioUrl || !isExternalUrl(a.audioUrl)) return false
+        if (!getAudioUrl(a) || !isExternalUrl(getAudioUrl(a))) return false
         const s = new Date(a.startTime).getTime()
         const e = new Date(a.endTime).getTime()
         return now >= s - PRELOAD_BEFORE_MS && now < s && now < e
@@ -150,7 +154,7 @@ export function useAudioEngine(artists: Artist[]) {
     const startTrack = useCallback(async (artist: Artist) => {
         const audio = audioRef.current
         if (!audio) return
-        const rawUrl = artist.audioUrl!
+        const rawUrl = getAudioUrl(artist)
         const url = resolveStreamUrl(rawUrl)  // transparently proxy HTTP→HTTPS if needed
         const external = isExternalUrl(rawUrl)
 
@@ -243,14 +247,14 @@ export function useAudioEngine(artists: Artist[]) {
                 // ── Release after card ends (10 min grace) ─────────────────────
                 if (!active && currentUrlRef.current) {
                     const prevArtist = artistsRef.current.find(
-                        (a) => a.audioUrl === currentUrlRef.current ||
-                            resolveStreamUrl(a.audioUrl ?? "") === currentUrlRef.current
+                        (a) => getAudioUrl(a) === currentUrlRef.current ||
+                            resolveStreamUrl(getAudioUrl(a)) === currentUrlRef.current
                     )
                     if (prevArtist && shouldReleaseArtist(prevArtist)) {
                         if (!audio.paused) await fadeOut()
                         if (isExternalUrl(currentUrlRef.current)) releasePreload()
                         currentUrlRef.current = ""
-                        lastReleasedRef.current = prevArtist.audioUrl!
+                        lastReleasedRef.current = getAudioUrl(prevArtist)
                         updateMediaSession(null)
                     }
                 }
@@ -270,7 +274,7 @@ export function useAudioEngine(artists: Artist[]) {
                     return
                 }
 
-                const resolvedUrl = resolveStreamUrl(active.audioUrl!)
+                const resolvedUrl = resolveStreamUrl(getAudioUrl(active))
 
                 // ── Already playing/loaded the correct track — do nothing ───────
                 // This is the critical check: don't restart a live stream just
@@ -310,7 +314,7 @@ export function useAudioEngine(artists: Artist[]) {
         }
 
         const active = findActiveArtist(artistsRef.current)
-        if (active?.audioUrl) {
+        if (active && getAudioUrl(active)) {
             await startTrack(active)
         }
     }, [fadeOut, startTrack])
