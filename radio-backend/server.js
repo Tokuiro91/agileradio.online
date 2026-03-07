@@ -171,20 +171,31 @@ app.get('/internal/next', (req, res) => {
     db.get('SELECT * FROM schedule WHERE start_time <= ? AND end_time > ?', [now, now], (err, schedule) => {
         if (!schedule) return res.status(404).send('NO_SCHEDULE');
 
+        const offsetSeconds = Math.max(0, Math.floor((now - schedule.start_time) / 1000));
+
         if (schedule.type === 'track') {
             db.get('SELECT filename FROM tracks WHERE id = ?', [schedule.item_id], (err, track) => {
-                if (track) return res.send(path.join(MUSIC_DIR, track.filename));
+                if (track) {
+                    const fullPath = path.join(MUSIC_DIR, track.filename);
+                    return res.send(`annotate:liq_start_next=${offsetSeconds}:${fullPath}`);
+                }
                 res.status(404).send('TRACK_NOT_FOUND');
             });
         } else if (schedule.type === 'playlist') {
-            // Pick a random track from playlist to keep streaming active
+            // Pick a random track from playlist but since it's a playlist start, we might not know the exact offset easily 
+            // per track, but we can at least start the "session" from beginning or a random one.
+            // For now, let's treat playlist as "start from any track at 0" or just apply basic logic.
             db.get(`
                 SELECT t.filename FROM playlist_tracks pt 
                 JOIN tracks t ON t.id = pt.track_id 
                 WHERE pt.playlist_id = ? 
                 ORDER BY RANDOM() LIMIT 1
             `, [schedule.item_id], (err, track) => {
-                if (track) return res.send(path.join(MUSIC_DIR, track.filename));
+                if (track) {
+                    const fullPath = path.join(MUSIC_DIR, track.filename);
+                    // For playlists we don't necessarily want to offset into a random track unless it's a single track show.
+                    return res.send(fullPath);
+                }
                 res.status(404).send('PLAYLIST_EMPTY');
             });
         }
