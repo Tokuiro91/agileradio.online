@@ -3,7 +3,7 @@ import fs from "fs"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-    title: "BØDEN STADT — Offline",
+    title: "BØDEN — Offline",
 }
 
 interface Artist {
@@ -36,7 +36,7 @@ export default function OfflinePage() {
         <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center px-6">
             {/* Logo */}
             <h1 className="font-tektur font-bold text-4xl tracking-widest mb-2 text-[#99CCCC]">
-                BØDEN STADT
+                BØDEN
             </h1>
             <p className="font-mono text-[#737373] text-xs uppercase tracking-[0.3em] mb-12">
                 You're offline

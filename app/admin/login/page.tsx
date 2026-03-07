@@ -76,7 +76,7 @@ export default function LoginPage() {
             <div className="w-full max-w-sm">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <p className="text-[10px] uppercase tracking-[0.3em] text-[#525252] mb-2 font-tektur">BØDEN STADT</p>
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-[#525252] mb-2 font-tektur">BØDEN</p>
                     <h1 className="text-xl font-semibold text-white tracking-wide">Панель администратора</h1>
                 </div>
 

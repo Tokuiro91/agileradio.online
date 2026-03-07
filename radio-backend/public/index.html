@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BØDEN — Scheduling Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --border: #2a2a2a;
+            --accent: #99CCCC;
+            --text: #e5e5e5;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        .glass {
+            background: rgba(18, 18, 18, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .btn {
+            background: var(--border);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: black;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: black;
+            font-weight: bold;
+        }
+
+        .input-dark {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            width: 100%;
+            outline: none;
+        }
+
+        .input-dark:focus {
+            border-color: var(--accent);
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: "Courier New", Courier, monospace;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .fc-theme-standard td,
+        .fc-theme-standard th,
+        .fc-theme-standard .fc-scrollgrid {
+            border-color: var(--border) !important;
+        }
+
+        .fc-event {
+            background-color: var(--accent) !important;
+            border-color: var(--accent) !important;
+            color: black !important;
+            font-weight: bold;
+            padding: 2px;
+        }
+
+        .logout {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            color: var(--accent);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+    </style>
+</head>
+
+<body class="p-6">
+    <div id="login-view" class="max-w-md mx-auto mt-20 glass p-8 rounded-xl hidden">
+        <h1 class="text-2xl mb-6 text-center text-[#99CCCC]">BØDEN // ADMIN LOGIN</h1>
+        <input type="text" id="username" placeholder="Username" class="input-dark mb-4">
+        <input type="password" id="password" placeholder="Password" class="input-dark mb-6">
+        <button onclick="login()" class="btn btn-primary w-full">LOGIN</button>
+    </div>
+
+    <div id="dashboard-view" class="hidden max-w-7xl mx-auto">
+        <span onclick="logout()" class="logout text-sm hover:underline">LOGOUT</span>
+        <h1 class="text-3xl mb-8 border-b border-gray-800 pb-4 text-[#99CCCC]">BØDEN // SCHEDULING SYSTEM</h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="col-span-1 border-r border-gray-800 pr-6">
+                <!-- Tracks -->
+                <div class="mb-8">
+                    <h2 class="text-xl mb-4 border-l-4 border-[#99CCCC] pl-2">Tracks</h2>
+                    <input type="file" id="file-upload" multiple class="hidden" onchange="uploadTracks()">
+                    <button onclick="document.getElementById('file-upload').click()" id="upload-btn"
+                        class="btn btn-primary w-full mb-4">Upload MP3s</button>
+                    <div id="track-list" class="space-y-2 h-48 overflow-y-auto pr-2 custom-scrollbar text-sm"></div>
+                </div>
+
+                <!-- Playlists -->
+                <div class="mb-8">
+                    <h2 class="text-xl mb-4 border-l-4 border-[#99CCCC] pl-2">Playlists</h2>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="new-playlist-name" placeholder="Name" class="input-dark text-sm">
+                        <button onclick="createPlaylist()" class="btn text-sm">+</button>
+                    </div>
+                    <div id="playlist-list" class="space-y-2 h-48 overflow-y-auto pr-2 custom-scrollbar text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Calendar Area -->
+            <div class="col-span-1 lg:col-span-3">
+                <div class="glass p-4 rounded-xl mb-6">
+                    <h2 class="text-xl mb-4 border-l-4 border-[#99CCCC] pl-2">Schedule Broadcast</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Type</label>
+                            <select id="sch-type" onchange="loadScheduleItems()" class="input-dark text-sm">
+                                <option value="playlist">Playlist</option>
+                                <option value="track">Single Track</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Item to Play</label>
+                            <select id="sch-item" class="input-dark text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Start Time</label>
+                            <input type="datetime-local" id="sch-start" class="input-dark text-sm">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">End Time</label>
+                            <input type="datetime-local" id="sch-end" class="input-dark text-sm">
+                        </div>
+                        <div class="md:col-span-4 flex justify-end mt-2">
+                            <button onclick="scheduleEvent()" class="btn btn-primary">Add to Schedule</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar View -->
+                <div class="glass p-4 rounded-xl">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="playlist-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="glass p-6 rounded-xl w-full max-w-lg">
+            <h2 id="modal-pl-name" class="text-xl mb-4 border-b border-gray-800 pb-2">Playlist Editor</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <h3 class="text-sm text-gray-400 mb-2">Available Tracks</h3>
+                    <div id="modal-all-tracks"
+                        class="h-64 overflow-y-auto space-y-1 text-sm border border-gray-800 p-2 custom-scrollbar">
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm text-[#99CCCC] mb-2">Playlist Tracks</h3>
+                    <div id="modal-pl-tracks"
+                        class="h-64 overflow-y-auto space-y-1 text-sm border border-gray-800 p-2 bg-[#121212] custom-scrollbar">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button onclick="closeModal()" class="btn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let calendar;
+        let activePlaylistId = null;
+
+        const _apiFetch = async (endpoint, options = {}) => {
+            options.headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
+            const res = await fetch(`/api${endpoint}`, options);
+            if (res.status === 401) { logout(); throw new Error('Auth failed'); }
+            if (!res.ok) { const json = await res.json().catch(() => ({})); alert(json.error || 'API Error'); throw new Error(json.error); }
+            return res.json();
+        };
+
+        const api = async (endpoint, options = {}, isFile = false) => {
+            if (!isFile && options.body && typeof options.body !== 'string') {
+                options.body = JSON.stringify(options.body);
+                options.headers = { ...options.headers, 'Content-Type': 'application/json' };
+            }
+            return _apiFetch(endpoint, options);
+        }
+
+        function showView() {
+            if (token) {
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('dashboard-view').classList.remove('hidden');
+                initApp();
+            } else {
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('dashboard-view').classList.add('hidden');
+            }
+        }
+
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    token = data.token;
+                    localStorage.setItem('token', token);
+                    showView();
+                } else alert('Invalid credentials');
+            } catch (e) { }
+        }
+
+        function logout() { token = null; localStorage.removeItem('token'); showView(); }
+
+        let tracksData = [];
+        let playlistsData = [];
+
+        async function initApp() {
+            if (!calendar) initCalendar();
+            await loadTracks();
+            await loadPlaylists();
+            await loadScheduleItems();
+            loadEvents();
+        }
+
+        /* TRACKS */
+        async function loadTracks() {
+            tracksData = await api('/tracks');
+            const list = document.getElementById('track-list');
+            list.innerHTML = tracksData.map(t => `
+                <div class="flex justify-between items-center bg-[#121212] p-2 rounded border border-gray-800 mb-1">
+                    <span class="truncate pr-2 flex-1" title="${t.originalname}">${t.originalname.substring(0, 25)}</span>
+                    <button onclick="deleteTrack(${t.id})" class="text-red-500 hover:text-red-400 font-bold ml-2">&times;</button>
+                </div>
+            `).join('');
+        }
+
+        async function uploadTracks() {
+            const files = document.getElementById('file-upload').files;
+            if (!files.length) return;
+            const btn = document.getElementById('upload-btn');
+            const origTxt = btn.innerText;
+            btn.innerText = 'Uploading...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            for (let f of files) formData.append('files', f);
+            try {
+                await api('/tracks', { method: 'POST', body: formData }, true);
+                document.getElementById('file-upload').value = '';
+                await loadTracks();
+                await loadScheduleItems();
+            } catch (e) { } finally {
+                btn.innerText = origTxt;
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteTrack(id) {
+            if (confirm('Delete track permanently?')) {
+                await api(`/tracks/${id}`, { method: 'DELETE' });
+                await loadTracks();
+                await loadScheduleItems();
+            }
+        }
+
+        /* PLAYLISTS */
+        async function loadPlaylists() {
+            playlistsData = await api('/playlists');
+            const list = document.getElementById('playlist-list');
+            list.innerHTML = playlistsData.map(p => `
+                <div class="flex flex-col bg-[#121212] p-2 rounded border border-gray-800 cursor-pointer mb-2" onclick="openPlaylist(${p.id}, '${p.name.replace(/'/g, "\\'")}')">
+                    <div class="flex justify-between items-center w-full">
+                        <span class="truncate flex-1 font-bold text-[#99CCCC]">${p.name}</span>
+                        <button onclick="event.stopPropagation(); deletePlaylist(${p.id})" class="text-red-500 hover:text-red-400 font-bold ml-2">&times;</button>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">${p.track_count} tracks</div>
+                </div>
+            `).join('');
+        }
+
+        async function createPlaylist() {
+            const name = document.getElementById('new-playlist-name').value;
+            if (!name) return;
+            await api('/playlists', { method: 'POST', body: { name, track_ids: [] } });
+            document.getElementById('new-playlist-name').value = '';
+            await loadPlaylists();
+            await loadScheduleItems();
+        }
+
+        async function deletePlaylist(id) {
+            if (confirm('Delete playlist?')) {
+                await api(`/playlists/${id}`, { method: 'DELETE' });
+                await loadPlaylists();
+                await loadScheduleItems();
+            }
+        }
+
+        /* PLAYLIST EDITOR MODAL */
+        async function openPlaylist(id, name) {
+            activePlaylistId = id;
+            document.getElementById('modal-pl-name').innerText = `Editing: ${name}`;
+            document.getElementById('playlist-modal').classList.remove('hidden');
+            renderPlaylistEditor();
+        }
+
+        async function renderPlaylistEditor() {
+            const plTracks = await api(`/playlists/${activePlaylistId}/tracks`);
+
+            const allContainer = document.getElementById('modal-all-tracks');
+            const plContainer = document.getElementById('modal-pl-tracks');
+
+            allContainer.innerHTML = tracksData.map(t => `
+                <div class="flex justify-between bg-gray-900 p-1 mb-1 rounded hover:bg-gray-800 cursor-pointer" onclick="addToPlaylist(${t.id})">
+                    <span class="truncate" title="${t.originalname}">${t.originalname}</span>
+                    <span class="text-green-500 font-bold">+</span>
+                </div>
+            `).join('');
+
+            plContainer.innerHTML = plTracks.map(t => `
+                <div class="flex justify-between items-center bg-gray-800 p-1 mb-1 rounded">
+                    <span class="truncate pr-2" title="${t.originalname}">${t.originalname}</span>
+                    <button onclick="removeFromPlaylist(${t.id})" class="text-red-500 font-bold text-lg leading-none">&times;</button>
+                </div>
+            `).join('');
+            if (plTracks.length === 0) plContainer.innerHTML = '<div class="text-gray-500 text-center mt-4">No tracks</div>';
+        }
+
+        async function addToPlaylist(trackId) {
+            await api(`/playlists/${activePlaylistId}/tracks`, { method: 'POST', body: { track_id: trackId } });
+            renderPlaylistEditor();
+            loadPlaylists();
+        }
+
+        async function removeFromPlaylist(trackId) {
+            await api(`/playlists/${activePlaylistId}/tracks/${trackId}`, { method: 'DELETE' });
+            renderPlaylistEditor();
+            loadPlaylists();
+        }
+
+        function closeModal() { document.getElementById('playlist-modal').classList.add('hidden'); activePlaylistId = null; loadPlaylists(); }
+
+        /* SCHEDULING & CALENDAR */
+        function initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+                height: 600,
+                slotMinTime: "00:00:00",
+                slotMaxTime: "24:00:00",
+                nowIndicator: true,
+                events: async (info, successCallback, failureCallback) => {
+                    const start = new Date(info.start).getTime();
+                    const end = new Date(info.end).getTime();
+                    try {
+                        const schedule = await api(`/schedule?start=${start}&end=${end}`);
+                        successCallback(schedule.map(s => ({
+                            id: s.id,
+                            title: s.title,
+                            start: new Date(s.start_time).toISOString(),
+                            end: new Date(s.end_time).toISOString(),
+                            allDay: false
+                        })));
+                    } catch (e) { failureCallback(e); }
+                },
+                eventClick: async (info) => {
+                    if (confirm(`Delete scheduled event?\\n${info.event.title}`)) {
+                        await api(`/schedule/${info.event.id}`, { method: 'DELETE' });
+                        calendar.refetchEvents();
+                    }
+                }
+            });
+            calendar.render();
+        }
+
+        async function loadScheduleItems() {
+            const type = document.getElementById('sch-type').value;
+            const sel = document.getElementById('sch-item');
+            sel.innerHTML = '';
+            if (type === 'playlist') {
+                playlistsData.forEach(p => { sel.innerHTML += `<option value="${p.id}">${p.name}</option>`; });
+            } else {
+                tracksData.forEach(t => { sel.innerHTML += `<option value="${t.id}">${t.originalname}</option>`; });
+            }
+        }
+
+        async function scheduleEvent() {
+            const type = document.getElementById('sch-type').value;
+            const itemIdStr = document.getElementById('sch-item').value;
+            const sStr = document.getElementById('sch-start').value;
+            const eStr = document.getElementById('sch-end').value;
+            if (!itemIdStr || !sStr || !eStr) return alert("Fill all schedule fields");
+
+            const item_id = parseInt(itemIdStr);
+            const start_time = new Date(sStr).getTime();
+            const end_time = new Date(eStr).getTime();
+            if (end_time <= start_time) return alert("End time must be after start time");
+
+            const titleObj = type === 'playlist' ? playlistsData.find(p => p.id === item_id) : tracksData.find(t => t.id === item_id);
+            const title = `[${type.toUpperCase()}] ${titleObj ? (titleObj.name || titleObj.originalname) : 'Unknown'}`;
+
+            try {
+                await api('/schedule', {
+                    method: 'POST',
+                    body: { title, type, item_id, start_time, end_time }
+                });
+                calendar.refetchEvents();
+                document.getElementById('sch-start').value = '';
+                document.getElementById('sch-end').value = '';
+            } catch (e) { }
+        }
+
+        async function loadEvents() { if (calendar) calendar.refetchEvents(); }
+
+        showView();
+    </script>
+</body>
+
+</html>

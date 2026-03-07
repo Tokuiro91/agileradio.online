@@ -49,7 +49,7 @@ export default function RegisterPage() {
                         </svg>
                     </Link>
                     <h1 className="text-3xl font-bold text-[#99CCCC] font-mono tracking-tighter">
-                        <div className="font-tektur"><SolariText text="JOIN BØDEN STADT" /></div>
+                        <div className="font-tektur"><SolariText text="JOIN BØDEN" /></div>
                     </h1>
                 </div>
 

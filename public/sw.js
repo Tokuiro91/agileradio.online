@@ -1,4 +1,4 @@
-// BØDEN STADT Radio — Service Worker
+// BØDEN Radio — Service Worker
 // Cache strategy: network-first for pages/API, cache-first for static assets
 
 const CACHE_NAME = "boden-v1"

@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Star,
 } from "lucide-react"
+import { ReactionPicker } from "@/components/reaction-picker"
 
 import type { Artist } from "@/lib/artists-data"
 import { useArtists } from "@/lib/use-artists"
@@ -262,7 +263,7 @@ export function MobileRadio() {
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
         <div className="flex flex-col items-center gap-4">
           <h1 className="font-tektur font-bold text-2xl tracking-wider text-[#99CCCC] animate-pulse">
-            BØDEN STADT
+            BØDEN
           </h1>
           <div className="text-[#737373] font-mono text-[10px] uppercase tracking-[0.2em]">
             Syncing Schedule...
@@ -307,8 +308,8 @@ export function MobileRadio() {
     <div className="flex flex-col h-[100dvh] w-full bg-[#0a0a0a] overflow-hidden select-none">
       {/* Mobile Header */}
       <header className="flex items-center justify-between px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] bg-[#0a0a0a] border-b border-[#2a2a2a] z-20">
-        <h1 className="font-tektur font-bold text-xl tracking-wider text-[#e5e5e5]">
-          BØDEN STADT
+        <h1 className="font-tektur font-bold text-xl tracking-wider text-[#99CCCC]">
+          BØDEN
         </h1>
 
         <Sheet>
@@ -320,7 +321,7 @@ export function MobileRadio() {
           <SheetContent side="right" className="bg-[#0a0a0a] border-l border-[#2a2a2a] text-white">
             <SheetHeader>
               <SheetTitle className="text-[#99CCCC] font-tektur font-bold text-2xl tracking-wider">
-                BØDEN STADT
+                BØDEN
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-6 mt-12">
@@ -506,7 +507,7 @@ export function MobileRadio() {
                   </p>
                 )}
 
-                <h2 className={`${isAd ? 'text-2xl' : 'text-xl'} font-bold text-[#e5e5e5] leading-tight`}>
+                <h2 className={`${isAd ? 'text-2xl' : 'text-xl'} font-bold text-[#99CCCC] leading-tight`}>
                   {artist.name}
                 </h2>
                 <p className={`${isAd ? 'text-sm text-[#99CCCC]' : 'text-xs text-[#a3a3a3]'} tracking-wide mt-0.5`}>
@@ -720,6 +721,11 @@ export function MobileRadio() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Mobile-friendly Reaction Picker placement */}
+      <div className="fixed bottom-24 right-4 z-[9997]">
+        <ReactionPicker isFixed={false} className="shadow-2xl border-white/10" />
       </div>
     </div>
   )

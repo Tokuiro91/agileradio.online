@@ -5,6 +5,9 @@ import { Header } from "@/components/header"
 import { ArtistCard } from "@/components/artist-card"
 import { Timeline } from "@/components/timeline"
 import { useArtists } from "@/lib/use-artists"
+import { Clock, ExternalLink } from "lucide-react"
+import { ReactionPicker } from "@/components/reaction-picker"
+import type { Artist } from "@/lib/artists-data"
 import { useAudioEngine } from "@/hooks/use-audio-engine"
 import { useServerTimeSync, setGlobalTimeOffset, getSyncedTime } from "@/hooks/use-server-time"
 
@@ -47,6 +50,30 @@ export function RadioPlayer() {
   const [progress, setProgress] = useState(0)
   const [visibleIndex, setVisibleIndex] = useState(0)
   const [now, setNow] = useState(0)
+  const [userFavorites, setUserFavorites] = useState<number[]>([])
+
+  useEffect(() => {
+    fetch("/api/listeners/favorites")
+      .then(r => r.json())
+      .then(data => {
+        if (data.favoriteArtists) setUserFavorites(data.favoriteArtists)
+      })
+      .catch()
+  }, [])
+
+  const toggleFavorite = async (artistId: number) => {
+    const isFav = userFavorites.includes(artistId)
+    setUserFavorites(prev => isFav ? prev.filter(id => id !== artistId) : [...prev, artistId])
+    try {
+      await fetch("/api/listeners/favorites", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artistId }),
+      })
+    } catch {
+      setUserFavorites(prev => isFav ? [...prev, artistId] : prev.filter(id => id !== artistId))
+    }
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -303,6 +330,8 @@ export function RadioPlayer() {
                   artist={artist}
                   status={getStatus(i)}
                   progress={realIndex === currentPlayingIndex ? progress : 0}
+                  isFavorite={userFavorites.includes(artist.id)}
+                  onToggleFavorite={toggleFavorite}
                 />
               </div>
             )
@@ -328,6 +357,11 @@ export function RadioPlayer() {
         onSeek={scrollToArtist}
         artists={sortedArtists}
       />
+
+      {/* Reaction picker positioned in the bottom-right of the player area */}
+      <div className="absolute bottom-24 right-8 z-[9997]">
+        <ReactionPicker isFixed={false} />
+      </div>
 
     </div>
   )

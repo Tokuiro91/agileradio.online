@@ -6,6 +6,14 @@ export default auth((req) => {
     const isLoginPage = req.nextUrl.pathname === "/admin/login"
     const isAuthRoute = req.nextUrl.pathname.startsWith("/api/auth")
 
+    if (isAdminRoute) {
+        const host = req.headers.get("host") || ""
+        // Restrict to VPS IP or localhost for dev
+        if (!host.includes("163.245.219.4") && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+            return NextResponse.redirect(new URL("/", req.url))
+        }
+    }
+
     if (isAuthRoute) return NextResponse.next()
     if (isLoginPage) return NextResponse.next()
 

@@ -26,7 +26,7 @@ files.forEach(f => {
     const fullPath = path.join(basePath, f);
     if (fs.existsSync(fullPath)) {
         let content = fs.readFileSync(fullPath, 'utf-8');
-        content = content.replace(/KØDE/g, 'BØDEN STADT');
+        content = content.replace(/KØDE/g, 'BØDEN');
         content = content.replace(/KODE/g, 'BODEN-STADT');
         content = content.replace(/kode-/g, 'boden-');
         fs.writeFileSync(fullPath, content);

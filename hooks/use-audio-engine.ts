@@ -72,7 +72,7 @@ function updateMediaSession(artist: Artist | null) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: artist.show,
             artist: artist.name,
-            album: "BØDEN STADT",
+            album: "BØDEN",
             artwork: [
                 { src: artist.image, sizes: "512x512", type: "image/jpeg" },
             ],

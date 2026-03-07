@@ -20,7 +20,7 @@ interface Pack {
     stickers: Sticker[]
 }
 
-export function ReactionPicker() {
+export function ReactionPicker({ isFixed = true, className = "" }: { isFixed?: boolean; className?: string }) {
     const { data: session } = useSession()
     const [packs, setPacks] = useState<Pack[]>([])
     const [open, setOpen] = useState(false)
@@ -69,7 +69,10 @@ export function ReactionPicker() {
             {/* Toggle button */}
             <button
                 onClick={() => setOpen(o => !o)}
-                className="fixed bottom-6 right-6 z-[9997] w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-[#99CCCC] hover:bg-[#99CCCC]/10 transition-colors shadow-lg"
+                className={isFixed
+                    ? "fixed bottom-6 right-6 z-[9997] w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-[#99CCCC] hover:bg-[#99CCCC]/10 transition-colors shadow-lg"
+                    : `w-10 h-10 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center text-[#99CCCC] hover:bg-[#99CCCC]/10 transition-colors shadow-lg ${className}`
+                }
                 aria-label="Open reaction picker"
             >
                 <Smile className="w-5 h-5" />
@@ -77,7 +80,10 @@ export function ReactionPicker() {
 
             {/* Picker panel */}
             {open && (
-                <div className="fixed bottom-20 right-6 z-[9997] w-72 bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl shadow-2xl overflow-hidden">
+                <div className={isFixed
+                    ? "fixed bottom-20 right-6 z-[9997] w-72 bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl shadow-2xl overflow-hidden"
+                    : "absolute bottom-16 right-0 z-[9997] w-72 bg-[#0f0f0f] border border-[#2a2a2a] rounded-2xl shadow-2xl overflow-hidden"
+                }>
                     {/* Pack tabs */}
                     <div className="flex border-b border-[#2a2a2a] overflow-x-auto">
                         {packs.map(pack => (
@@ -88,7 +94,7 @@ export function ReactionPicker() {
                                     ? "text-[#99CCCC] border-b-2 border-[#99CCCC]"
                                     : "text-[#737373] hover:text-white"
                                     } ${pack.locked ? "opacity-50 cursor-not-allowed" : ""}`}
-                                title={pack.locked ? "BØDEN STADT Plus required" : pack.name}
+                                title={pack.locked ? "BØDEN Plus required" : pack.name}
                             >
                                 {pack.locked && <Lock className="w-3 h-3" />}
                                 {pack.name}
@@ -122,7 +128,7 @@ export function ReactionPicker() {
                     {/* Plus upsell */}
                     {packs.some(p => p.locked) && (
                         <div className="border-t border-[#2a2a2a] px-3 py-2 text-[10px] font-mono text-[#737373] text-center">
-                            <span className="text-[#99CCCC] font-tektur">BØDEN STADT Plus</span> — unlock premium sticker packs
+                            <span className="text-[#99CCCC] font-tektur">BØDEN Plus</span> — unlock premium sticker packs
                         </div>
                     )}
                 </div>

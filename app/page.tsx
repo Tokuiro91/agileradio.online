@@ -20,9 +20,6 @@ export default function Page() {
       {/* Animated floating emoji reactions (visible to everyone) */}
       <ReactionsOverlay />
 
-      {/* Reaction picker button (only for logged-in users) */}
-      <ReactionPicker />
-
       <div className="hidden md:block">
         <RadioPlayer />
       </div>

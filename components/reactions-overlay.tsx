@@ -12,25 +12,24 @@ function FloatingReaction({ reaction, onDone }: { reaction: Reaction; onDone: ()
         const el = ref.current
         if (!el) return
 
-        // Random horizontal start position (20%–80% of viewport)
-        const x = 20 + Math.random() * 60
+        // Random horizontal start position (40%–60% of viewport to overlap card)
+        const x = 40 + Math.random() * 20
         el.style.left = `${x}%`
 
-        // Random horizontal drift during float (-40px to +40px)
-        const drift = -40 + Math.random() * 80
+        // Random horizontal drift during float (-20px to +20px)
+        const drift = -20 + Math.random() * 40
         el.style.setProperty("--drift", `${drift}px`)
 
-        // Animate: float upward over 3s, fade in quickly then fade out near top
+        // Animate: pop in, float up slowly, fade out
         el.animate(
             [
-                { transform: "translateY(0) translateX(0) scale(0.6)", opacity: 0 },
-                { transform: "translateY(-20px) translateX(calc(var(--drift) * 0.2)) scale(1.2)", opacity: 1, offset: 0.08 },
-                { transform: "translateY(-60vh) translateX(calc(var(--drift) * 0.7)) scale(1)", opacity: 0.9, offset: 0.7 },
-                { transform: "translateY(-90vh) translateX(var(--drift)) scale(0.8)", opacity: 0 },
+                { transform: "translateY(0) translateX(0) scale(0)", opacity: 0 },
+                { transform: "translateY(-20px) translateX(calc(var(--drift) * 0.5)) scale(2)", opacity: 1, offset: 0.2 },
+                { transform: "translateY(-100px) translateX(calc(var(--drift))) scale(2.5)", opacity: 0, offset: 1 },
             ],
             {
-                duration: 3000 + Math.random() * 1000,
-                easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                duration: 2000 + Math.random() * 500,
+                easing: "ease-out",
                 fill: "forwards",
             }
         ).onfinish = onDone
@@ -38,12 +37,12 @@ function FloatingReaction({ reaction, onDone }: { reaction: Reaction; onDone: ()
         return () => { }
     }, [onDone])
 
-    const size = reaction.stickerType === "emoji" ? "text-3xl" : "w-10 h-10"
+    const size = reaction.stickerType === "emoji" ? "text-4xl" : "w-16 h-16"
 
     return (
         <div
             ref={ref}
-            className="absolute bottom-32 pointer-events-none select-none"
+            className="absolute bottom-1/2 pointer-events-none select-none"
             style={{
                 willChange: "transform, opacity",
                 zIndex: 9998,

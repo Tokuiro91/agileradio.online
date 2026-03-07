@@ -7,7 +7,7 @@ export default function AboutPage() {
         <div className="min-h-screen bg-[#0a0a0a] text-white p-4 pt-32 pb-20 max-w-2xl mx-auto space-y-12">
             <header className="space-y-4">
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-[#99CCCC] font-tektur">
-                    <SolariText text="BØDEN STADT RADIO" />
+                    <SolariText text="BØDEN RADIO" />
                 </h1>
                 <p className="text-xl md:text-2xl text-[#a3a3a3] font-mono leading-tight uppercase">
                     Independent broadcasting from the edge of culture.
@@ -18,7 +18,7 @@ export default function AboutPage() {
                 <section className="space-y-4">
                     <h2 className="text-white font-mono uppercase text-sm tracking-widest">The Mission</h2>
                     <p>
-                        BØDEN STADT is more than just a radio station. It is a digital playground for sonic explorers,
+                        BØDEN is more than just a radio station. It is a digital playground for sonic explorers,
                         a platform for voices that refuse to be quieted, and a bridge between global
                         electronic communities.
                     </p>

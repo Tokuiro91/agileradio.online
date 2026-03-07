@@ -264,7 +264,7 @@ export default function AdminPage() {
       <header className="border-b border-[#2a2a2a] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <h1 className="text-lg font-semibold tracking-wide">
-            <span className="font-tektur">BØDEN STADT</span> <span className="text-[#737373]">/ ADMIN</span>
+            <span className="font-tektur">BØDEN</span> <span className="text-[#737373]">/ ADMIN</span>
           </h1>
           <div className="flex gap-1">
             <button onClick={() => setActiveTab("artists")} className={`px-3 py-1 text-xs rounded-sm transition ${activeTab === "artists" ? "bg-[#dc2626] text-white" : "text-[#737373] hover:text-white"}`}>Расписание</button>

@@ -56,7 +56,7 @@ export function Header({
       {/* LEFT */}
       <div className="flex items-center gap-4">
         <h1 className={`font-tektur font-bold text-xl md:text-2xl tracking-wider text-[#99CCCC]`}>
-          <span className="text-[#99CCCC]">BØDEN STADT</span>
+          <span className="text-[#99CCCC]">BØDEN</span>
         </h1>
         <div className="hidden md:flex items-center gap-2 text-xs text-[#737373] font-mono">
           <Clock className="w-3 h-3" />
@@ -123,7 +123,7 @@ export function Header({
           <SheetContent side="right" className="bg-[#0a0a0a] border-l border-[#2a2a2a] text-white">
             <SheetHeader>
               <SheetTitle className="text-[#99CCCC] font-tektur font-bold text-2xl tracking-wider">
-                BØDEN STADT
+                BØDEN
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col gap-6 mt-12">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
-import { Clock, ExternalLink } from "lucide-react"
+import { Clock, ExternalLink, Star } from "lucide-react"
 import type { Artist } from "@/lib/artists-data"
 import { SolariText } from "@/components/solari-text"
 import Lottie from "lottie-react"
@@ -71,9 +71,11 @@ interface ArtistCardProps {
   artist: Artist
   status?: "played" | "playing" | "upcoming"
   progress?: number
+  isFavorite?: boolean
+  onToggleFavorite?: (id: number) => void
 }
 
-export function ArtistCard({ artist, status, progress: externalProgress = 0 }: ArtistCardProps) {
+export function ArtistCard({ artist, status, progress: externalProgress = 0, isFavorite, onToggleFavorite }: ArtistCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [now, setNow] = useState(getSyncedTime())
 
@@ -274,19 +276,34 @@ export function ArtistCard({ artist, status, progress: externalProgress = 0 }: A
                 {artist.location}
               </p>
             )}
-            <h3 className={`${isAd ? 'text-2xl' : 'text-xl'} font-bold text-[#e5e5e5] leading-tight mb-0.5`}>
+            <h3 className={`${isAd ? 'text-2xl' : 'text-xl'} font-bold text-[#99CCCC] leading-tight mb-0.5`}>
               <SolariText text={artist.name} stagger={30} />
             </h3>
             <p className={`${isAd ? 'text-sm text-[#99CCCC]' : 'text-xs text-[#a3a3a3]'} tracking-wide`}>
               <SolariText text={artist.show} stagger={20} />
             </p>
 
-            {/* Social links */}
-            {!isAd && (artist.instagramUrl || artist.soundcloudUrl || artist.bandcampUrl) && (
+            {/* Social links & Favorites */}
+            {!isAd && (
               <div
                 className="flex items-center gap-3 mt-3"
                 onClick={(e) => e.stopPropagation()}
               >
+                {onToggleFavorite && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleFavorite(artist.id)
+                    }}
+                    className={`transition-colors flex-shrink-0 ${isFavorite
+                      ? "text-[#99CCCC]"
+                      : "text-[#737373] hover:text-[#99CCCC]"
+                      }`}
+                    aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Star className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                  </button>
+                )}
                 {artist.instagramUrl && (
                   <a
                     href={artist.instagramUrl}

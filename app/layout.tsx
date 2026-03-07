@@ -20,13 +20,13 @@ const jetbrainsMono = JetBrains_Mono({
 
 /* Metadata */
 export const metadata: Metadata = {
-  title: "BØDEN STADT Online",
+  title: "BØDEN Online",
   description: "Live online radio with curated DJ sets and electronic music",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "BØDEN STADT",
+    title: "BØDEN",
   },
   icons: {
     icon: [
