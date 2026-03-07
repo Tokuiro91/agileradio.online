@@ -111,13 +111,15 @@ export function SolariText({
 
     // Precompute random timing per character (stable across renders of same text)
     const timings = useMemo(() => {
+        let accumulatedDelay = 0
         return Array.from({ length: upper.length }, (_, i) => {
-            // Stagger delay: cumulative + random ±50% of base stagger
-            const jitter = stagger * 0.5 * (Math.random() * 2 - 1) // ±50%
-            const delay = i * stagger + jitter
-            // Per-character flip duration: 80–260ms
-            const duration = 80 + Math.floor(Math.random() * 180)
-            return { delay: Math.max(0, delay), duration }
+            // Stagger delay: 20-40ms between letters
+            const currentStagger = 20 + Math.random() * 20
+            accumulatedDelay += currentStagger
+
+            // Per-character flip duration: 80–120ms
+            const duration = 80 + Math.floor(Math.random() * 40)
+            return { delay: Math.max(0, accumulatedDelay), duration }
         })
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [upper, stagger])
