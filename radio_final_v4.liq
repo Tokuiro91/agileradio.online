@@ -1,0 +1,43 @@
+settings.init.allow_root.set(true)
+settings.log.level.set(3)
+
+music_dir = '/var/radio/music'
+
+# Robust track fetcher
+def get_next_track() =
+  # Fetch from Node.js bridge
+  result = process.read.lines(timeout=3.0, "curl -s http://127.0.0.1:8080/internal/next")
+  if list.length(result) > 0 then
+    res = list.hd(default="", result)
+    if res != "" and res != "NO_SCHEDULE" and res != "TRACK_NOT_FOUND" and res != "PLAYLIST_EMPTY" then
+      log("Successfully fetched scheduled item: #{res}")
+      request.create(res)
+    else
+      # No schedule, return null to let fallback take over
+      null
+    end
+  else
+    null
+  end
+end
+
+# Primary source: Dashboard schedule
+my_source = request.dynamic(id="boden_dashboard", prefetch=1, get_next_track)
+
+# Fallback: Random music from the directory
+fallback_music = playlist(music_dir, mode='randomize', reload_mode='watch')
+
+# Final output source
+# track_sensitive=false allows interrupting the fallback as soon as a scheduled item appears
+radio = fallback(track_sensitive=false, [my_source, fallback_music, blank()])
+
+# Safety
+radio = mksafe(radio)
+
+# Output at 128 kbps
+output.icecast(%mp3(bitrate=128), 
+  host='127.0.0.1', port=9090, 
+  password='AgileRadio2026!', mount='stream.mp3', 
+  name="BØDEN RADIO",
+  description="BØDEN Online Live",
+  radio)
