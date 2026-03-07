@@ -22,9 +22,10 @@ fallback_music = playlist(music_dir, mode='randomize', reload_mode='watch')
 
 radio = fallback(track_sensitive=true, [my_source, fallback_music, blank()])
 
-output.icecast(%mp3, 
+# Output at 192 kbps
+output.icecast(%mp3(bitrate=192), 
   host='127.0.0.1', port=9090, 
-  password='AgileRadio2026!', mount='stream', 
+  password='AgileRadio2026!', mount='stream.mp3', 
   name="BØDEN RADIO",
   description="BØDEN Live Broadcast",
   radio)
