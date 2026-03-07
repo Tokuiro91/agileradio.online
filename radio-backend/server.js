@@ -19,7 +19,10 @@ const PORT = process.env.PORT || 8080;
 if (!fs.existsSync(MUSIC_DIR)) fs.mkdirSync(MUSIC_DIR, { recursive: true });
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, MUSIC_DIR),
-    filename: (req, file, cb) => cb(null, `${Date.now()}_${file.originalname.replace(/\\s+/g, '_')}`)
+    filename: (req, file, cb) => {
+        const cleanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        cb(null, `${Date.now()}_${cleanName}`);
+    }
 });
 const upload = multer({ storage });
 
